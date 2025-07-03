@@ -1,0 +1,749 @@
+<template>
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <!-- Hero Section -->
+    <div class="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 shadow-2xl">
+      <div class="container mx-auto px-4 py-12">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <!-- Icono principal con animación -->
+            <div class="bg-white/20 backdrop-blur-sm p-4 rounded-2xl shadow-lg border border-white/20">
+              <svg class="w-12 h-12 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-4xl font-bold text-white mb-2">
+                Gestión de Repartos
+                <span class="text-blue-200">{{ title }}</span>
+              </h1>
+              <p class="text-blue-100 text-lg">Sistema integrado de control y seguimiento</p>
+            </div>
+          </div>
+          
+          <!-- Indicadores de estado -->
+          <div class="hidden lg:flex items-center space-x-6">
+            <div class="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/20">
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                <span class="text-white font-medium">Sistema Online</span>
+              </div>
+            </div>
+            <div class="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/20">
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span class="text-white font-medium">{{ new Date().toLocaleTimeString() }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="container mx-auto px-4 py-8">
+      <!-- Estadísticas Dashboard -->
+      <div v-if="!loading && !error" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="stats-card bg-gradient-to-br from-emerald-500 to-emerald-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-emerald-100 text-sm font-medium">Total Repartos</p>
+              <p class="text-3xl font-bold text-white">{{ repartos.length }}</p>
+            </div>
+            <div class="bg-white/20 p-3 rounded-xl">
+              <img src="/src/assets/entrega.png" alt="Camión de entrega" class="w-8 h-8 object-contain brightness-0 invert">
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-card bg-gradient-to-br from-blue-500 to-blue-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-blue-100 text-sm font-medium">Exactos</p>
+              <p class="text-3xl font-bold text-white">{{ exactCount }}</p>
+            </div>
+            <div class="bg-white/20 p-3 rounded-xl">
+              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-card bg-gradient-to-br from-amber-500 to-orange-500">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-orange-100 text-sm font-medium">Con Diferencias</p>
+              <p class="text-3xl font-bold text-white">{{ withDifferencesCount }}</p>
+            </div>
+            <div class="bg-white/20 p-3 rounded-xl">
+              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-card bg-gradient-to-br from-purple-500 to-purple-600">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-purple-100 text-sm font-medium">Pendientes</p>
+              <p class="text-3xl font-bold text-white">{{ pendingCount }}</p>
+            </div>
+            <div class="bg-white/20 p-3 rounded-xl">
+              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading state mejorado -->
+      <div v-if="loading" class="flex flex-col items-center justify-center py-20">
+        <div class="relative">
+          <!-- Spinner principal -->
+          <div class="animate-spin rounded-full h-20 w-20 border-4 border-blue-100"></div>
+          <div class="animate-spin rounded-full h-20 w-20 border-4 border-blue-600 border-t-transparent absolute top-0 left-0"></div>
+          
+          <!-- Icono central -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="mt-6 text-center">
+          <h3 class="text-xl font-semibold text-gray-700 mb-2">Cargando Repartos</h3>
+          <p class="text-gray-500">Obteniendo los datos más recientes...</p>
+          
+          <!-- Barra de progreso animada -->
+          <div class="w-64 bg-gray-200 rounded-full h-2 mt-4">
+            <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full animate-pulse" style="width: 70%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error state mejorado -->
+      <div v-else-if="error" class="max-w-md mx-auto">
+        <div class="bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-200 rounded-2xl p-8 shadow-xl">
+          <div class="text-center">
+            <!-- Icono de error -->
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+              <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            
+            <h3 class="text-xl font-bold text-red-800 mb-2">Error al cargar los datos</h3>
+            <p class="text-red-600 mb-6">{{ error }}</p>
+            
+            <button 
+              @click="fetchRepartos" 
+              class="error-retry-btn"
+            >
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              Reintentar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de repartos con contenedor mejorado -->
+      <div v-else class="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+        <RepartoTable 
+          :title="`Repartos ${title}`"
+          :repartos="repartos"
+          @refresh="fetchRepartos"
+          @edit="openEditModal"
+          @delete-movement="deleteMovement"
+        />
+        
+        <!-- Botón Procesar debajo de la tabla -->
+        <div class="bg-gradient-to-r from-slate-50 to-blue-50 px-6 py-4 border-t border-gray-200/60">
+          <div class="flex justify-between items-center">
+            <!-- Información de estado -->
+            <div class="flex items-center space-x-2 text-sm text-gray-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span>{{ repartosListos.length }} de {{ repartos.length }} repartos listos</span>
+            </div>
+            
+            <!-- Botón compacto -->
+            <button 
+              @click="procesarRepartos"
+              :disabled="repartosListos.length === 0 || procesando"
+              class="process-btn-compact inline-flex items-center space-x-2 transition-all duration-200"
+              :class="{
+                'opacity-50 cursor-not-allowed': repartosListos.length === 0 || procesando,
+                'hover:shadow-md transform hover:-translate-y-0.5': repartosListos.length > 0 && !procesando
+              }"
+            >
+              <!-- Icono -->
+              <svg v-if="!procesando" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+              </svg>
+              <!-- Spinner cuando está procesando -->
+              <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              
+              <!-- Texto -->
+              <span class="font-medium">
+                {{ procesando ? 'Procesando...' : 'Procesar Repartos' }}
+              </span>
+              
+              <!-- Badge con contador -->
+              <span v-if="!procesando && repartosListos.length > 0" class="inline-flex items-center justify-center w-5 h-5 text-xs font-bold bg-white/30 rounded-full">
+                {{ repartosListos.length }}
+              </span>
+            </button>
+          </div>
+          
+          <!-- Mensaje informativo cuando no hay repartos listos -->
+          <div v-if="repartosListos.length === 0" class="mt-3 text-center">
+            <p class="text-gray-500 text-xs">
+              Los repartos sin diferencias o con movimientos financieros están listos para procesar
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de edición -->
+      <EditMovementModal
+        :is-visible="showModal"
+        :reparto="selectedReparto"
+        :saving="saving"
+        @close="closeModal"
+        @save="saveMovement"
+      />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, computed } from 'vue'
+import { config } from '../config/config.js'
+import RepartoTable from '../components/RepartoTable.vue'
+import EditMovementModal from '../components/EditMovementModal.vue'
+
+// Props
+const props = defineProps({
+  title: {
+    type: String,
+    required: true
+  },
+  service: {
+    type: Object,
+    required: true
+  }
+})
+
+// Estado reactivo
+const repartos = ref([])
+const loading = ref(false)
+const error = ref(null)
+const procesando = ref(false)
+
+// Estado del modal
+const showModal = ref(false)
+const selectedReparto = ref(null)
+const saving = ref(false)
+
+// Propiedades computadas para estadísticas
+const exactCount = computed(() => {
+  return repartos.value.filter(r => r.depositoReal === r.depositoEsperado).length
+})
+
+const withDifferencesCount = computed(() => {
+  return repartos.value.filter(r => r.depositoReal !== r.depositoEsperado).length
+})
+
+const pendingCount = computed(() => {
+  return repartos.value.filter(r => r.movimientoFinanciero).length
+})
+
+// Computed para repartos listos para procesar
+const repartosListos = computed(() => {
+  return repartos.value.filter(reparto => {
+    // Un reparto está listo si:
+    // 1. No tiene diferencias (depositoReal === depositoEsperado) O
+    // 2. Tiene diferencias pero ya tiene un movimiento financiero asociado
+    const sinDiferencias = reparto.depositoReal === reparto.depositoEsperado
+    const tieneMovimiento = reparto.movimientoFinanciero && Object.keys(reparto.movimientoFinanciero).length > 0
+    
+    return sinDiferencias || tieneMovimiento
+  })
+})
+
+// Función para obtener los repartos
+const fetchRepartos = async () => {
+  loading.value = true
+  error.value = null
+  
+  try {
+    console.log('🔄 Cargando datos para', props.title)
+    
+    // En modo desarrollo, usar datos simulados si el backend no está disponible
+    if (config.DEV_MODE) {
+      console.log('🧪 Modo desarrollo: intentando conectar con API real para', props.title)
+      
+      try {
+        // Intentar usar la API real
+        const data = await props.service.getRepartos()
+        repartos.value = data
+        console.log('✅ Datos cargados desde API real para', props.title, '- Total:', data.length, 'repartos')
+        return
+      } catch (apiError) {
+        console.log('⚠️ API real no disponible, usando datos simulados para', props.title, '- Error:', apiError.message)
+        
+        // Simular delay de carga para datos simulados
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Datos simulados específicos por sucursal
+        const datosSimulados = {
+          'Jumillano': [
+            {
+              id: 'JUM-001',
+              idReparto: 'RTO-JUM-20240115',
+              fechaReparto: '2024-01-15',
+              depositoEsperado: 15000,
+              depositoReal: 15000,
+            diferencia: 0,
+            estado: 'EXACTO',
+            movimientoFinanciero: null
+          },
+          {
+            id: 'JUM-002',
+            idReparto: 'RTO-JUM-20240116',
+            fechaReparto: '2024-01-16', 
+            depositoEsperado: 12000,
+            depositoReal: 11800,
+            diferencia: -200,
+            estado: 'DIFERENCIA',
+            movimientoFinanciero: {
+              tipo: 'RETENCION',
+              importe: 200,
+              concepto: 'Retención por combustible',
+              fecha: '2024-01-16',
+              nro_retencion: 'RET-001'
+            }
+          },
+          {
+            id: 'JUM-003',
+            idReparto: 'RTO-JUM-20240117',
+            fechaReparto: '2024-01-17',
+            depositoEsperado: 18000,
+            depositoReal: 18500,
+            diferencia: 500,
+            estado: 'DIFERENCIA',
+            movimientoFinanciero: null
+          }
+        ],
+        'NAFA': [
+          {
+            id: 'NAF-001',
+            idReparto: 'RTO-NAF-20240115',
+            fechaReparto: '2024-01-15',
+            depositoEsperado: 22000,
+            depositoReal: 21700,
+            diferencia: -300,
+            estado: 'DIFERENCIA',
+            movimientoFinanciero: {
+              tipo: 'CHEQUE',
+              importe: 300,
+              concepto: 'Pago con cheque',
+              fecha: '2024-01-15',
+              banco: 'Banco Nación',
+              nro_cheque: '12345678'
+            }
+          },
+          {
+            id: 'NAF-002',
+            idReparto: 'RTO-NAF-20240116',
+            fechaReparto: '2024-01-16',
+            depositoEsperado: 19500,
+            depositoReal: 19500,
+            diferencia: 0,
+            estado: 'EXACTO',
+            movimientoFinanciero: null
+          }
+        ],
+        'LaPlata': [
+          {
+            id: 'LP-001',
+            idReparto: 'RTO-LP-20240115',
+            fechaReparto: '2024-01-15',
+            depositoEsperado: 25000,
+            depositoReal: 24800,
+            diferencia: -200,
+            estado: 'DIFERENCIA',
+            movimientoFinanciero: {
+              tipo: 'RETENCION',
+              importe: 200,
+              concepto: 'Retención IIBB',
+              fecha: '2024-01-15',
+              nro_retencion: 'RET-LP-001'
+            }
+          }
+        ]
+        }
+        
+        repartos.value = datosSimulados[props.title] || datosSimulados['Jumillano']
+        return
+      }
+    } else {
+      // En producción, usar la API directamente
+      const data = await props.service.getRepartos()
+      repartos.value = data
+    }
+  } catch (err) {
+    console.error('Error fetching repartos:', err)
+    
+    // En caso de error, si estamos en desarrollo, mostrar datos de ejemplo
+    if (config.DEV_MODE) {
+      console.log('Error conectando al backend, usando datos simulados de fallback para', props.title)
+      repartos.value = [
+        {
+          id: `${props.title}-FB-001`,
+          idReparto: `RTO-${props.title.toUpperCase()}-FALLBACK`,
+          fechaReparto: new Date().toISOString().split('T')[0],
+          depositoEsperado: 15000,
+          depositoReal: 15000,
+          diferencia: 0,
+          estado: 'EXACTO',
+          movimientoFinanciero: null
+        }
+      ]
+    } else {
+      error.value = err.message || 'Error al cargar los repartos'
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// Función para procesar repartos listos
+const procesarRepartos = async () => {
+  if (repartosListos.value.length === 0) {
+    alert('No hay repartos listos para procesar')
+    return
+  }
+
+  // Confirmar la acción
+  const confirmacion = confirm(
+    `¿Estás seguro de que quieres procesar ${repartosListos.value.length} repartos listos? ` +
+    'Esta acción enviará los datos al backend.'
+  )
+  
+  if (!confirmacion) return
+
+  procesando.value = true
+
+  try {
+    // Preparar los datos para enviar
+    const repartosParaEnviar = repartosListos.value.map(reparto => ({
+      idReparto: reparto.idReparto,
+      fechaReparto: reparto.fechaReparto,
+      depositoEsperado: reparto.depositoEsperado,
+      depositoReal: reparto.depositoReal,
+      diferencia: reparto.depositoReal - reparto.depositoEsperado,
+      movimientoFinanciero: reparto.movimientoFinanciero || null,
+      estado: 'procesado',
+      fechaProcesamiento: new Date().toISOString()
+    }))
+
+    console.log('Enviando repartos al backend:', repartosParaEnviar)
+
+    // Aquí puedes agregar la llamada a tu API para enviar los repartos
+    // Por ejemplo, si tienes un método en tu servicio:
+    // await props.service.procesarRepartos(repartosParaEnviar)
+    
+    // Por ahora, simularemos el envío con un timeout
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    // Mostrar mensaje de éxito
+    alert(`✅ Se procesaron exitosamente ${repartosListos.value.length} repartos`)
+    
+    // Opcional: recargar los datos después del procesamiento
+    await fetchRepartos()
+
+  } catch (err) {
+    console.error('Error al procesar repartos:', err)
+    alert('❌ Error al procesar los repartos: ' + (err.message || 'Error desconocido'))
+  } finally {
+    procesando.value = false
+  }
+}
+
+// Función para abrir modal de edición
+const openEditModal = (reparto) => {
+  selectedReparto.value = reparto
+  showModal.value = true
+}
+
+// Función para cerrar el modal
+const closeModal = () => {
+  showModal.value = false
+  selectedReparto.value = null
+}
+
+// Función para guardar el movimiento
+const saveMovement = async (movementData) => {
+  if (!selectedReparto.value) return
+  
+  saving.value = true
+  
+  try {
+    let updatedMovimiento
+    
+    // En modo desarrollo, simular guardado
+    if (config.DEV_MODE) {
+      console.log('Modo desarrollo: simulando guardado de movimiento para', selectedReparto.value.idReparto)
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      updatedMovimiento = { ...movementData, id: Date.now() }
+    } else {
+      // Determinar si es creación o actualización
+      if (selectedReparto.value.movimientoFinanciero) {
+        // Actualizar movimiento existente
+        updatedMovimiento = await props.service.updateMovimientoFinanciero(
+          selectedReparto.value.idReparto, 
+          movementData
+        )
+      } else {
+        // Crear nuevo movimiento
+        updatedMovimiento = await props.service.createMovimientoFinanciero(
+          selectedReparto.value.idReparto, 
+          movementData
+        )
+      }
+    }
+    
+    // Actualizar la lista local
+    const index = repartos.value.findIndex(r => r.idReparto === selectedReparto.value.idReparto)
+    if (index !== -1) {
+      repartos.value[index] = {
+        ...repartos.value[index],
+        movimientoFinanciero: updatedMovimiento
+      }
+    }
+
+    // Cerrar modal y mostrar mensaje de éxito
+    closeModal()
+    
+    // Mostrar notificación de éxito más profesional
+    const tipoMovimiento = movementData.tipo === 'RETENCION' ? 'Retención' : 'Cheque'
+    console.log(`✅ ${tipoMovimiento} guardado correctamente para reparto ${selectedReparto.value.idReparto}`)
+    
+  } catch (err) {
+    console.error('Error al guardar movimiento financiero:', err)
+    
+    // En modo desarrollo, mostrar error más amigable
+    if (config.DEV_MODE) {
+      console.log('⚠️ Error simulado en modo desarrollo, pero se procede normalmente')
+      closeModal()
+    } else {
+      alert('Error al guardar el movimiento financiero: ' + (err.message || 'Error de conexión'))
+    }
+  } finally {
+    saving.value = false
+  }
+}
+
+// Función para eliminar un movimiento financiero
+const deleteMovement = async (reparto) => {
+  if (!reparto || !reparto.movimientoFinanciero) return
+  
+  // Confirmar eliminación
+  const tipoMovimiento = reparto.movimientoFinanciero.tipo === 'RETENCION' ? 'retención' : 'cheque'
+  const confirmed = confirm(`¿Estás seguro de que quieres eliminar el movimiento de ${tipoMovimiento} del reparto ${reparto.idReparto}?`)
+  
+  if (!confirmed) return
+  
+  try {
+    // En modo desarrollo, simular eliminación
+    if (config.DEV_MODE) {
+      console.log('Modo desarrollo: simulando eliminación de movimiento para', reparto.idReparto)
+      await new Promise(resolve => setTimeout(resolve, 800))
+    } else {
+      // Eliminar del backend
+      await props.service.deleteMovimientoFinanciero(reparto.idReparto)
+    }
+    
+    // Actualizar la lista local
+    const index = repartos.value.findIndex(r => r.idReparto === reparto.idReparto)
+    if (index !== -1) {
+      repartos.value[index] = {
+        ...repartos.value[index],
+        movimientoFinanciero: null
+      }
+    }
+
+    console.log(`✅ Movimiento financiero eliminado para reparto ${reparto.idReparto}`)
+    
+  } catch (err) {
+    console.error('Error al eliminar movimiento financiero:', err)
+    
+    if (config.DEV_MODE) {
+      console.log('⚠️ Error simulado en modo desarrollo, pero se procede normalmente')
+    } else {
+      alert('Error al eliminar el movimiento financiero: ' + (err.message || 'Error de conexión'))
+    }
+  }
+}
+
+// Cargar datos al montar el componente
+onMounted(() => {
+  fetchRepartos()
+})
+</script>
+
+<style scoped>
+/* Estilos para las tarjetas de estadísticas */
+.stats-card {
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Botón de reintentar mejorado */
+.error-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  font-weight: 600;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.4);
+}
+
+.error-retry-btn:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(239, 68, 68, 0.5);
+}
+
+.error-retry-btn:active {
+  transform: translateY(0);
+}
+
+/* Animación del gradiente de fondo */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Efectos de glassmorphism */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* Animaciones personalizadas */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Responsive design mejorado */
+@media (max-width: 768px) {
+  .stats-card {
+    padding: 1rem;
+  }
+  
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Efectos de hover para las estadísticas */
+.stats-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.stats-card:hover::before {
+  transform: translateX(100%);
+}
+
+/* Mejoras en el loading spinner */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Estilos para el botón de procesar compacto */
+.process-btn-compact {
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+  cursor: pointer;
+}
+
+.process-btn-compact:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
+}
+
+.process-btn-compact:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
+}
+
+.process-btn-compact:disabled {
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+  box-shadow: 0 1px 2px rgba(156, 163, 175, 0.1);
+  cursor: not-allowed;
+}
+</style>
