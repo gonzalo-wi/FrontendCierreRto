@@ -18,7 +18,7 @@ const routes = [
   },
   {
     path: '/jumillano',
-    name: 'Jumillano',
+    name: 'Ciudadela',
     component: TablaJumiViews
   },
   {

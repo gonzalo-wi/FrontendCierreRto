@@ -23,7 +23,7 @@ apiClient.interceptors.response.use(
 
 export default {
   /**
-   * Obtiene los repartos de Jumillano desde la API real
+   * Obtiene los repartos de Ciudadela desde la API real
    * @param {string} date - Fecha en formato MM-DD-YYYY (opcional, por defecto 07-02-2025)
    * @returns {Promise} 
    */
@@ -33,11 +33,11 @@ export default {
       // Formato MM-DD-YYYY que espera la API
       const fechaConsulta = date || '07-02-2025'
       
-      console.log('🔍 Consultando API de Jumillano para fecha:', fechaConsulta)
+      console.log('🔍 Consultando API de Ciudadela para fecha:', fechaConsulta)
       
       const response = await apiClient.get(`/deposits/jumillano?date=${fechaConsulta}`)
       
-      console.log('✅ Respuesta de API Jumillano recibida:', Object.keys(response.data).length, 'identificadores')
+      console.log('✅ Respuesta de API Ciudadela recibida:', Object.keys(response.data).length, 'identificadores')
       
       // Transformar los datos de la API al formato esperado por el frontend
       const repartos = await this.transformApiDataToRepartos(response.data, fechaConsulta)

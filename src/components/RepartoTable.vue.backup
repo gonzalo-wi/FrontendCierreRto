@@ -24,6 +24,15 @@
               <h2 class="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-purple-800 bg-clip-text text-transparent">
                 {{ title }}
               </h2>
+              <div class="hidden sm:flex items-center space-x-2">
+                <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
+                  {{ filteredRepartos.length }} de {{ repartos.length }}
+                </div>
+                <div class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-1.5 rounded-full text-sm font-bold flex items-center space-x-2 shadow-lg">
+                  <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <span>En Línea</span>
+                </div>
+              </div>
             </div>
             
             <!-- Badges informativos mejorados -->
@@ -33,6 +42,12 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 <span>Listado de Repartos</span>
+              </div>
+              <div class="bg-gradient-to-r from-blue-100 to-blue-200 border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Actualizado {{ new Date().toLocaleTimeString() }}</span>
               </div>
             </div>
           </div>
@@ -127,6 +142,69 @@
           </button>
         </div>
       </div>
+              v-model="soloDiferencias"
+              type="checkbox"
+              class="sr-only"
+            >
+            <div class="relative">
+              <div class="w-6 h-6 border-2 border-slate-300 rounded-md transition-all duration-300 group-hover:border-amber-400"
+                   :class="{ 'bg-gradient-to-br from-amber-500 to-orange-500 border-amber-500': soloDiferencias }">
+                <svg v-if="soloDiferencias" class="w-4 h-4 text-white absolute top-0.5 left-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+            </div>
+            <span class="text-sm font-medium text-slate-700 group-hover:text-amber-700">Solo Diferencias</span>
+          </label>
+
+          <!-- Limpiar filtros -->
+          <button
+            v-if="hasActiveFilters"
+            @click="clearFilters"
+            class="group bg-white/70 backdrop-blur border border-slate-200 hover:border-red-300 text-slate-700 hover:text-red-700 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 hover:shadow-md flex items-center space-x-2"
+          >
+            <svg class="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <span>Limpiar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla responsive mejorada -->
+            <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+          <input
+            v-model="searchRTO"
+            type="text"
+            placeholder="Buscar por RTO..."
+            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all duration-200"
+          />
+        </div>
+
+        <!-- Filtro por estado -->
+        <select
+          v-model="estadoFilter"
+          class="block w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+        >
+          <option value="">Todos los estados</option>
+          <option value="EXACTO">Exactos</option>
+          <option value="DIFERENCIA">Con diferencias</option>
+          <option value="PENDIENTE">Pendientes</option>
+        </select>
+
+        <!-- Botón limpiar filtros -->
+        <button
+          v-if="hasActiveFilters"
+          @click="clearFilters"
+          class="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-lg transition-all duration-200"
+        >
+          Limpiar filtros
+        </button>
+      </div>
     </div>
 
     <!-- Controles y estadísticas -->
@@ -142,18 +220,19 @@
 
       <!-- Controles de paginación y vista -->
       <div class="flex items-center space-x-3">
-        <!-- Selector de elementos por página -->
-        <div class="flex items-center space-x-2">
-          <span class="text-sm text-gray-700">Mostrar:</span>
-          <select
-            v-model="itemsPerPage"
-            class="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option :value="25">25</option>
-            <option :value="50">50</option>
-            <option :value="100">100</option>
-            <option :value="filteredRepartos.length">Todos</option>
-          </select>
+          <!-- Selector de elementos por página -->
+          <div class="flex items-center space-x-2">
+            <span class="text-sm text-gray-700">Mostrar:</span>
+            <select
+              v-model="itemsPerPage"
+              class="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option :value="25">25</option>
+              <option :value="50">50</option>
+              <option :value="100">100</option>
+              <option :value="filteredRepartos.length">Todos</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -165,7 +244,9 @@
           <tr>
             <th class="table-header group">
               <div class="flex items-center space-x-2">
-                <img src="@/assets/entrega.png" alt="ID Reparto" class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                </svg>
                 <span>ID Reparto</span>
               </div>
             </th>
@@ -268,15 +349,19 @@
               <button
                 v-if="page !== '...'"
                 @click="goToPage(page)"
-                :class="{
-                  'bg-blue-50 border-blue-500 text-blue-600': page === currentPage,
-                  'bg-white border-gray-300 text-gray-500 hover:bg-gray-50': page !== currentPage
-                }"
-                class="relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-all duration-200"
+                :class="[
+                  'relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-all duration-200',
+                  page === currentPage
+                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                ]"
               >
                 {{ page }}
               </button>
-              <span v-else class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+              <span
+                v-else
+                class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+              >
                 ...
               </span>
             </template>
@@ -295,20 +380,43 @@
         </div>
       </div>
 
-      <!-- Loading state mejorado -->
-      <div v-if="loading" class="text-center py-16 bg-gradient-to-b from-gray-50 to-white">
-        <div class="max-w-md mx-auto">
-          <!-- Spinner mejorado -->
-          <div class="mb-6 relative">
-            <div class="mx-auto w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center animate-pulse">
-              <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
+      <!-- Loading state bonito -->
+      <div v-if="loading" class="px-8 py-12">
+        <div class="text-center mb-8">
+          <div class="inline-flex items-center space-x-3">
+            <!-- Spinner animado -->
+            <div class="relative">
+              <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+              <div class="absolute inset-0 w-8 h-8 border-4 border-transparent border-b-blue-400 rounded-full animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+            </div>
+            <span class="text-lg font-semibold text-gray-700">Cargando repartos...</span>
+          </div>
+        </div>
+        
+        <!-- Skeleton de la tabla -->
+        <div class="overflow-hidden">
+          <!-- Header skeleton -->
+          <div class="grid grid-cols-6 gap-4 py-4 px-6 bg-gray-50 border-b">
+            <div class="h-4 bg-gray-200 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-200 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-200 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-200 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-200 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          
+          <!-- Rows skeleton -->
+          <div v-for="i in 8" :key="i" class="grid grid-cols-6 gap-4 py-4 px-6 border-b border-gray-100">
+            <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+            <div class="flex space-x-2">
+              <div class="h-6 w-16 bg-gray-100 rounded animate-pulse"></div>
+              <div class="h-6 w-16 bg-gray-100 rounded animate-pulse"></div>
             </div>
           </div>
-        
-          <h3 class="text-xl font-semibold text-gray-700 mb-2">Cargando repartos...</h3>
-          <p class="text-gray-500">Obteniendo los datos más recientes...</p>
         </div>
       </div>
 
@@ -319,12 +427,15 @@
           <div class="mb-6 relative">
             <div class="mx-auto w-24 h-24 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center">
               <svg class="w-12 h-12 text-blue-500 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
+            <!-- Anillos decorativos -->
+            <div class="absolute inset-0 rounded-full border-4 border-blue-200 animate-ping opacity-20"></div>
+            <div class="absolute inset-2 rounded-full border-2 border-blue-300 animate-pulse opacity-30"></div>
           </div>
           
-          <h3 class="text-xl font-semibold text-gray-700 mb-2">
+          <h3 class="text-xl font-bold text-gray-900 mb-2">
             {{ hasActiveFilters ? 'No hay resultados para los filtros aplicados' : 'No hay repartos disponibles' }}
           </h3>
           <p class="text-gray-500 mb-6">
@@ -354,7 +465,6 @@
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>
@@ -526,6 +636,27 @@ watch(totalPages, (newTotal) => {
   width: 100%;
 }
 
+/* Botón de actualizar con efectos */
+.refresh-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.refresh-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.refresh-btn:hover::before {
+  left: 100%;
+}
+
 /* Animación para las filas */
 @keyframes slideInUp {
   from {
@@ -554,11 +685,79 @@ tbody tr:hover {
   border-left: 4px solid #3b82f6;
 }
 
+/* Mejoras visuales para bordes y sombras */
+.bg-white {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+/* Estados de loading y empty mejorados */
+.animate-bounce {
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0,0,0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -10px, 0);
+  }
+  70% {
+    transform: translate3d(0, -5px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+/* Efectos de glassmorphism */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* Gradientes y sombras modernas */
+.shadow-2xl {
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Animación de pulsing para indicadores */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Animación de ping para efectos decorativos */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
 /* Estilos responsive mejorados */
 @media (max-width: 768px) {
   .table-header {
     padding: 0.5rem 0.75rem;
     font-size: 0.75rem;
+  }
+  
+  .refresh-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -582,5 +781,40 @@ button:focus-visible {
 
 .table-header:hover svg {
   transform: scale(1.1);
+}
+
+/* Animación de entrada suave para la tabla completa */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.bg-white.shadow-2xl {
+  animation: fadeInScale 0.4s ease-out;
+}
+
+/* Efectos de hover para badges y elementos interactivos */
+.bg-blue-100 {
+  transition: all 0.3s ease;
+}
+
+.bg-blue-100:hover {
+  background-color: #dbeafe;
+  transform: scale(1.05);
+}
+
+.bg-green-100 {
+  transition: all 0.3s ease;
+}
+
+.bg-green-100:hover {
+  background-color: #dcfce7;
+  transform: scale(1.05);
 }
 </style>

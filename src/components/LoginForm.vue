@@ -148,7 +148,7 @@
       <!-- Footer -->
       <div class="text-center">
         <p class="text-blue-300 text-sm">
-          © 2025 IVESS - EL JUMILLANO. Todos los derechos reservados.
+          © 2025 IVESS - CIUDADELA. Todos los derechos reservados.
         </p>
       </div>
     </div>

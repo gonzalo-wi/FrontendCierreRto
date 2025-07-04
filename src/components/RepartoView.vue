@@ -324,7 +324,7 @@ const fetchRepartos = async () => {
         
         // Datos simulados específicos por sucursal
         const datosSimulados = {
-          'Jumillano': [
+          'Ciudadela': [
             {
               id: 'JUM-001',
               idReparto: 'RTO-JUM-20240115',
@@ -411,7 +411,7 @@ const fetchRepartos = async () => {
         ]
         }
         
-        repartos.value = datosSimulados[props.title] || datosSimulados['Jumillano']
+        repartos.value = datosSimulados[props.title] || datosSimulados['Ciudadela']
         return
       }
     } else {

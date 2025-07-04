@@ -24,6 +24,15 @@
               <h2 class="text-3xl font-bold bg-gradient-to-r from-slate-800 via-blue-800 to-purple-800 bg-clip-text text-transparent">
                 {{ title }}
               </h2>
+              <div class="hidden sm:flex items-center space-x-2">
+                <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
+                  {{ filteredRepartos.length }} de {{ repartos.length }}
+                </div>
+                <div class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-1.5 rounded-full text-sm font-bold flex items-center space-x-2 shadow-lg">
+                  <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <span>En Línea</span>
+                </div>
+              </div>
             </div>
             
             <!-- Badges informativos mejorados -->
@@ -33,6 +42,12 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
                 <span>Listado de Repartos</span>
+              </div>
+              <div class="bg-gradient-to-r from-blue-100 to-blue-200 border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>Actualizado {{ new Date().toLocaleTimeString() }}</span>
               </div>
             </div>
           </div>
@@ -165,7 +180,9 @@
           <tr>
             <th class="table-header group">
               <div class="flex items-center space-x-2">
-                <img src="@/assets/entrega.png" alt="ID Reparto" class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity">
+                <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                </svg>
                 <span>ID Reparto</span>
               </div>
             </th>

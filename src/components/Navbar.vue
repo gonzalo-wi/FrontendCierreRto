@@ -1,76 +1,93 @@
 <template>
-  <nav class="bg-gradient-to-r from-slate-800 via-blue-900 to-slate-800 shadow-2xl border-b border-blue-700/50">
+  <nav class="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 shadow-2xl border-b border-blue-700/30 backdrop-blur-lg">
     <div class="container mx-auto px-4">
       <div class="flex justify-between items-center h-20">
-        <!-- Logo/Título mejorado -->
+        <!-- Logo/Título mejorado con animaciones -->
         <div class="flex items-center space-x-4">
-          <img src="../assets/LogoIvess.png" alt="Logo Ivess" class="w-14 h-14 object-contain hover:scale-105 transition-transform duration-300">
+          <div class="relative">
+            <img src="../assets/LogoIvess.png" alt="Logo Ivess" class="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 object-contain hover:scale-110 transition-all duration-500 filter drop-shadow-lg">
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-xl opacity-0 hover:opacity-100 transition-opacity duration-500"></div>
+          </div>
           <router-link 
             to="/" 
-            class="text-white text-2xl font-bold hover:text-blue-200 transition-all duration-300 hover:scale-105"
+            class="group text-white text-lg sm:text-xl md:text-2xl font-bold hover:text-blue-200 transition-all duration-500 relative"
           >
-            <span class="bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
-              Cierre Repartos
+            <span class="bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent group-hover:from-blue-200 group-hover:via-purple-200 group-hover:to-white transition-all duration-500">
+              <span class="hidden sm:inline">Cierre Repartos</span>
+              <span class="sm:hidden">Cierre</span>
             </span>
+            <div class="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-full transition-all duration-500"></div>
           </router-link>
         </div>
 
-        <!-- Enlaces de navegación mejorados -->
-        <div class="hidden md:flex items-center space-x-2">
+        <!-- Enlaces de navegación mejorados con efectos premium -->
+        <div class="hidden lg:flex items-center space-x-1">
           <router-link 
             to="/" 
-            class="nav-link group relative"
+            class="nav-link group relative overflow-hidden"
             :class="{ 'active': $route.path === '/' }"
           >
-            <div class="flex items-center space-x-2">
-              <svg class="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 00-2 2h2a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-              </svg>
-              <span class="font-medium">Dashboard</span>
+            <div class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 group-hover:bg-white/10 backdrop-blur-sm">
+              <div class="relative">
+                <svg class="w-5 h-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 00-2 2h2a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                <div class="absolute inset-0 bg-blue-400 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+              </div>
+              <span class="font-semibold text-sm tracking-wide">Dashboard</span>
             </div>
-            <div class="nav-indicator"></div>
+            <div class="nav-indicator absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 group-hover:w-3/4 transition-all duration-300"></div>
           </router-link>
 
           <router-link 
             to="/jumillano" 
-            class="nav-link group relative"
+            class="nav-link group relative overflow-hidden"
             :class="{ 'active': $route.path === '/jumillano' }"
           >
-            <div class="flex items-center space-x-2">
-              <svg class="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
-              <span class="font-medium">Jumillano</span>
+            <div class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 group-hover:bg-white/10 backdrop-blur-sm">
+              <div class="relative">
+                <svg class="w-5 h-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <div class="absolute inset-0 bg-blue-400 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+              </div>
+              <span class="font-semibold text-sm tracking-wide">Ciudadela</span>
             </div>
-            <div class="nav-indicator"></div>
-          </router-link>
-          
-          <router-link 
-            to="/nafa" 
-            class="nav-link group relative"
-            :class="{ 'active': $route.path === '/nafa' }"
-          >
-            <div class="flex items-center space-x-2">
-              <svg class="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
-              <span class="font-medium">NAFA</span>
-            </div>
-            <div class="nav-indicator"></div>
+            <div class="nav-indicator absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-cyan-400 group-hover:w-3/4 transition-all duration-300"></div>
           </router-link>
           
           <router-link 
             to="/laplata" 
-            class="nav-link group relative"
+            class="nav-link group relative overflow-hidden"
             :class="{ 'active': $route.path === '/laplata' }"
           >
-            <div class="flex items-center space-x-2">
-              <svg class="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-              </svg>
-              <span class="font-medium">La Plata</span>
+            <div class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 group-hover:bg-white/10 backdrop-blur-sm">
+              <div class="relative">
+                <svg class="w-5 h-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <div class="absolute inset-0 bg-emerald-400 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+              </div>
+              <span class="font-semibold text-sm tracking-wide">La Plata</span>
             </div>
-            <div class="nav-indicator"></div>
+            <div class="nav-indicator absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-emerald-400 to-teal-400 group-hover:w-3/4 transition-all duration-300"></div>
+          </router-link>
+          
+          <router-link 
+            to="/nafa" 
+            class="nav-link group relative overflow-hidden"
+            :class="{ 'active': $route.path === '/nafa' }"
+          >
+            <div class="flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 group-hover:bg-white/10 backdrop-blur-sm">
+              <div class="relative">
+                <svg class="w-5 h-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <div class="absolute inset-0 bg-purple-400 rounded-full blur-sm opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+              </div>
+              <span class="font-semibold text-sm tracking-wide">NAFA</span>
+            </div>
+            <div class="nav-indicator absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-purple-400 to-indigo-400 group-hover:w-3/4 transition-all duration-300"></div>
           </router-link>
 
           <!-- Indicador de estado online y usuario -->
@@ -104,7 +121,7 @@
         </div>
 
         <!-- Menú móvil mejorado -->
-        <div class="md:hidden">
+        <div class="lg:hidden">
           <button 
             @click="toggleMobileMenu"
             class="mobile-menu-btn"
@@ -126,19 +143,34 @@
         leave-from-class="transform translate-y-0 opacity-100"
         leave-to-class="transform -translate-y-4 opacity-0"
       >
-        <div v-if="mobileMenuOpen" class="md:hidden">
+        <div v-if="mobileMenuOpen" class="lg:hidden">
           <div class="px-4 pt-4 pb-6 space-y-3 bg-gradient-to-b from-slate-800 to-slate-900 border-t border-blue-700/30">
+            <!-- Dashboard en menú móvil -->
+            <router-link 
+              to="/" 
+              @click="closeMobileMenu"
+              class="mobile-nav-link"
+              :class="{ 'active': $route.path === '/' }"
+            >
+              <div class="flex items-center space-x-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 00-2 2h2a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                <span class="font-medium">Dashboard</span>
+              </div>
+            </router-link>
+            
             <router-link 
               to="/jumillano" 
               @click="closeMobileMenu"
               class="mobile-nav-link"
-              :class="{ 'active': $route.path === '/jumillano' || $route.path === '/' }"
+              :class="{ 'active': $route.path === '/jumillano' }"
             >
               <div class="flex items-center space-x-3">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                 </svg>
-                <span class="font-medium">Jumillano</span>
+                <span class="font-medium">Ciudadela</span>
               </div>
             </router-link>
             

@@ -8,7 +8,7 @@
     </h3>
     
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <!-- Jumillano -->
+      <!-- Ciudadela -->
       <div class="flex items-center p-3 rounded-lg border-2 transition-all duration-300"
            :class="getConnectionCardClass('jumillano')">
         <div class="flex-shrink-0 mr-3">
@@ -17,7 +17,7 @@
           </div>
         </div>
         <div class="flex-1">
-          <h4 class="font-medium text-gray-900">Jumillano</h4>
+          <h4 class="font-medium text-gray-900">Ciudadela</h4>
           <p class="text-sm"
              :class="plantStatus.jumillano.connected ? 'text-green-600' : 'text-red-600'">
             {{ plantStatus.jumillano.connected ? 'Conectada' : 'Desconectada' }}
