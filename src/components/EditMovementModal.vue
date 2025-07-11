@@ -91,86 +91,65 @@
                     <option value="RETENCION">⚠️ RETENCIÓN</option>
                     <option value="CHEQUE">📄 CHEQUE</option>
                   </select>
-                  <p v-if="errors.tipo" class="error-message">{{ errors.tipo }}</p>
-                </div>
+                  <p v-if="errors.tipo" class="error-message">{{ errors.tipo }}</p>                </div>
 
-                <!-- Campos comunes -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Número de cuenta -->
-                  <div class="form-group">
-                    <label class="form-label">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                      </svg>
-                      Número de Cliente
-                    </label>
-                    <input 
-                      v-model="formData.nrocta" 
-                      type="text" 
-                      required 
-                      class="form-input"
-                      :class="{ 'border-red-300 bg-red-50': errors.nrocta }"
-                      placeholder="Ej: 1234567890"
+                <!-- Sección para múltiples cheques -->
+              <div v-if="formData.tipo === 'CHEQUE'" class="mt-8">
+                <h4 class="font-semibold text-gray-900 text-lg mb-4">Detalles del Cheque</h4>
+                <div v-for="(cheque, index) in formData.cheques" :key="index" class="bg-white p-4 rounded-xl shadow-sm mb-4 border border-gray-200">
+                  <div class="flex justify-between items-center mb-4">
+                    <h5 class="font-semibold text-gray-800">Cheque {{ index + 1 }}</h5>
+                    <button 
+                      @click="eliminarCheque(index)" 
+                      class="text-red-600 hover:text-red-500 transition-all duration-200"
                     >
-                    <p v-if="errors.nrocta" class="error-message">{{ errors.nrocta }}</p>
-                  </div>
-
-                  <!-- Concepto -->
-                  <div class="form-group">
-                    <label class="form-label">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                       </svg>
-                      Concepto
-                    </label>
-                    <input 
-                      v-model="formData.concepto" 
-                      type="text" 
-                      required 
-                      class="form-input"
-                      :class="{ 'border-red-300 bg-red-50': errors.concepto }"
-                      placeholder="Descripción del movimiento"
-                    >
-                    <p v-if="errors.concepto" class="error-message">{{ errors.concepto }}</p>
+                    </button>
                   </div>
-                </div>
-
-                <!-- Campos específicos para RETENCIÓN -->
-                <div v-if="formData.tipo === 'RETENCION'" class="bg-orange-50 p-4 rounded-xl border border-orange-200">
-                  <h5 class="font-semibold text-orange-800 mb-3 flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                    </svg>
-                    Datos de Retención
-                  </h5>
-                  <div class="form-group">
-                    <label class="form-label">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
-                      </svg>
-                      Número de Retención
-                    </label>
-                    <input 
-                      v-model="formData.nro_retencion" 
-                      type="text" 
-                      required 
-                      class="form-input"
-                      :class="{ 'border-red-300 bg-red-50': errors.nro_retencion }"
-                      placeholder="Ej: RET001"
-                    >
-                    <p v-if="errors.nro_retencion" class="error-message">{{ errors.nro_retencion }}</p>
-                  </div>
-                </div>
-
-                <!-- Campos específicos para CHEQUE -->
-                <div v-if="formData.tipo === 'CHEQUE'" class="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                  <h5 class="font-semibold text-blue-800 mb-3 flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Datos del Cheque
-                  </h5>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Número de cuenta -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                        Número de Cliente
+                      </label>
+                      <input 
+                        v-model="cheque.nrocta" 
+                        type="text" 
+                        required 
+                        class="form-input"
+                        :class="{ 'border-red-300 bg-red-50': errors.nrocta }"
+                        placeholder="Ej: 1234567890"
+                      >
+                      <p v-if="errors.nrocta" class="error-message">{{ errors.nrocta }}</p>
+                    </div>
+
+                    <!-- Concepto -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Concepto
+                      </label>
+                      <input 
+                        v-model="cheque.concepto" 
+                        type="text" 
+                        required 
+                        class="form-input"
+                        :class="{ 'border-red-300 bg-red-50': errors.concepto }"
+                        placeholder="Descripción del movimiento"
+                      >
+                      <p v-if="errors.concepto" class="error-message">{{ errors.concepto }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Campos específicos para CHEQUE -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <!-- Banco -->
                     <div class="form-group">
                       <label class="form-label">
@@ -180,7 +159,7 @@
                         Banco
                       </label>
                       <input 
-                        v-model="formData.banco" 
+                        v-model="cheque.banco" 
                         type="text" 
                         required 
                         class="form-input"
@@ -200,7 +179,7 @@
                         Sucursal
                       </label>
                       <input 
-                        v-model="formData.sucursal" 
+                        v-model="cheque.sucursal" 
                         type="text" 
                         required 
                         class="form-input"
@@ -219,7 +198,7 @@
                         Localidad
                       </label>
                       <input 
-                        v-model="formData.localidad" 
+                        v-model="cheque.localidad" 
                         type="text" 
                         required 
                         class="form-input"
@@ -238,7 +217,7 @@
                         Número de Cheque
                       </label>
                       <input 
-                        v-model="formData.nro_cheque" 
+                        v-model="cheque.nro_cheque" 
                         type="text" 
                         required 
                         class="form-input"
@@ -257,7 +236,7 @@
                         Cuenta del Cheque
                       </label>
                       <input 
-                        v-model="formData.nro_cuenta" 
+                        v-model="cheque.nro_cuenta" 
                         type="text" 
                         required 
                         class="form-input"
@@ -276,7 +255,7 @@
                         Titular
                       </label>
                       <input 
-                        v-model="formData.titular" 
+                        v-model="cheque.titular" 
                         type="text" 
                         required 
                         class="form-input"
@@ -286,85 +265,235 @@
                       <p v-if="errors.titular" class="error-message">{{ errors.titular }}</p>
                     </div>
                   </div>
-                </div>
 
-                <!-- Campos comunes al final -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- Fecha -->
-                  <div class="form-group">
-                    <label class="form-label">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                      </svg>
-                      Fecha
-                    </label>
-                    <input 
-                      v-model="formData.fecha" 
-                      type="date" 
-                      required 
-                      class="form-input"
-                      :class="{ 'border-red-300 bg-red-50': errors.fecha }"
-                    >
-                    <p v-if="errors.fecha" class="error-message">{{ errors.fecha }}</p>
-                  </div>
-
-                  <!-- Importe -->
-                  <div class="form-group">
-                    <label class="form-label">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                      </svg>
-                      Importe
-                    </label>
-                    <div class="relative">
-                      <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
+                  <!-- Fecha e Importe para cheques -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <!-- Fecha -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        Fecha
+                      </label>
                       <input 
-                        v-model.number="formData.importe" 
-                        type="number" 
-                        step="0.01" 
+                        v-model="cheque.fecha" 
+                        type="date" 
                         required 
-                        class="form-input pl-8"
-                        :class="{ 'border-red-300 bg-red-50': errors.importe }"
-                        placeholder="0.00"
+                        class="form-input"
+                        :class="{ 'border-red-300 bg-red-50': errors.fecha }"
                       >
+                      <p v-if="errors.fecha" class="error-message">{{ errors.fecha }}</p>
                     </div>
-                    <p v-if="errors.importe" class="error-message">{{ errors.importe }}</p>
+
+                    <!-- Importe -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                        Importe
+                      </label>
+                      <div class="relative">
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
+                        <input 
+                          v-model.number="cheque.importe" 
+                          type="number" 
+                          step="0.01" 
+                          required 
+                          class="form-input pl-8"
+                          :class="{ 'border-red-300 bg-red-50': errors.importe }"
+                          placeholder="0.00"
+                        >
+                      </div>
+                      <p v-if="errors.importe" class="error-message">{{ errors.importe }}</p>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Loading state mejorado -->
-                <div v-if="saving" class="flex items-center justify-center py-4">
-                  <div class="flex items-center space-x-3">
-                    <div class="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
-                    <span class="text-blue-600 font-medium">Guardando cambios...</span>
-                  </div>
-                </div>
-
-                <!-- Botones mejorados -->
-                <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                <!-- Botón para agregar otro cheque -->
+                <div class="flex justify-end">
                   <button 
-                    type="button" 
-                    @click="$emit('close')"
-                    class="btn-secondary"
-                    :disabled="saving"
+                    @click.prevent="agregarCheque" 
+                    class="btn-primary flex items-center"
                   >
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                    Cancelar
-                  </button>
-                  <button 
-                    type="submit"
-                    class="btn-primary"
-                    :disabled="saving || !isFormValid"
-                  >
-                    <svg v-if="!saving" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
+                    Agregar Otro Cheque
                   </button>
                 </div>
-              </form>
+              </div>
+
+              <!-- Sección para múltiples retenciones -->
+              <div v-if="formData.tipo === 'RETENCION'" class="mt-8">
+                <h4 class="font-semibold text-gray-900 text-lg mb-4">Detalles de la Retención</h4>
+                <div v-for="(retencion, index) in formData.retenciones" :key="index" class="bg-white p-4 rounded-xl shadow-sm mb-4 border border-gray-200">
+                  <div class="flex justify-between items-center mb-4">
+                    <h5 class="font-semibold text-gray-800">Retención {{ index + 1 }}</h5>
+                    <button 
+                      @click="eliminarRetencion(index)" 
+                      class="text-red-600 hover:text-red-500 transition-all duration-200"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Número de cuenta -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                        Número de Cliente
+                      </label>
+                      <input 
+                        v-model="retencion.nrocta" 
+                        type="text" 
+                        required 
+                        class="form-input"
+                        :class="{ 'border-red-300 bg-red-50': errors.nrocta }"
+                        placeholder="Ej: 1234567890"
+                      >
+                      <p v-if="errors.nrocta" class="error-message">{{ errors.nrocta }}</p>
+                    </div>
+
+                    <!-- Concepto -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Concepto
+                      </label>
+                      <input 
+                        v-model="retencion.concepto" 
+                        type="text" 
+                        required 
+                        class="form-input"
+                        :class="{ 'border-red-300 bg-red-50': errors.concepto }"
+                        placeholder="Descripción del movimiento"
+                      >
+                      <p v-if="errors.concepto" class="error-message">{{ errors.concepto }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Campos específicos para RETENCION -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <!-- Número de Retención -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+                        </svg>
+                        Número de Retención
+                      </label>
+                      <input 
+                        v-model="retencion.nro_retencion" 
+                        type="text" 
+                        required 
+                        class="form-input"
+                        :class="{ 'border-red-300 bg-red-50': errors.nro_retencion }"
+                        placeholder="Ej: RET001"
+                      >
+                      <p v-if="errors.nro_retencion" class="error-message">{{ errors.nro_retencion }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Fecha e Importe para retenciones -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <!-- Fecha -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        Fecha
+                      </label>
+                      <input 
+                        v-model="retencion.fecha" 
+                        type="date" 
+                        required 
+                        class="form-input"
+                        :class="{ 'border-red-300 bg-red-50': errors.fecha }"
+                      >
+                      <p v-if="errors.fecha" class="error-message">{{ errors.fecha }}</p>
+                    </div>
+
+                    <!-- Importe -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                        Importe
+                      </label>
+                      <div class="relative">
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
+                        <input 
+                          v-model.number="retencion.importe" 
+                          type="number" 
+                          step="0.01" 
+                          required 
+                          class="form-input pl-8"
+                          :class="{ 'border-red-300 bg-red-50': errors.importe }"
+                          placeholder="0.00"
+                        >
+                      </div>
+                      <p v-if="errors.importe" class="error-message">{{ errors.importe }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Botón para agregar otra retención -->
+                <div class="flex justify-end">
+                  <button 
+                    @click.prevent="agregarRetencion" 
+                    class="btn-primary flex items-center"
+                  >
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Agregar Otra Retención
+                  </button>
+                </div>
+              </div>
+
+              <!-- Loading state mejorado -->
+              <div v-if="saving" class="flex items-center justify-center py-4">
+                <div class="flex items-center space-x-3">
+                  <div class="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+                  <span class="text-blue-600 font-medium">Guardando cambios...</span>
+                </div>
+              </div>
+
+              <!-- Botones mejorados -->
+              <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+                <button 
+                  type="button" 
+                  @click="$emit('close')"
+                  class="btn-secondary"
+                  :disabled="saving"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                  Cancelar
+                </button>
+                <button 
+                  type="submit"
+                  class="btn-primary"
+                  :disabled="saving || !isFormValid"
+                >
+                  <svg v-if="!saving" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                  {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
+                </button>
+              </div>
+            </form>
             </div>
           </div>
         </transition>
@@ -389,6 +518,11 @@ const props = defineProps({
   saving: {
     type: Boolean,
     default: false
+  },
+  movimientoTipo: {
+    type: String,
+    default: null,
+    validator: (value) => !value || ['cheque', 'retencion'].includes(value)
   }
 })
 
@@ -396,19 +530,9 @@ const emit = defineEmits(['close', 'save'])
 
 const formData = ref({
   tipo: '',
-  nrocta: '',
-  concepto: '',
-  fecha: '',
-  importe: 0,
-  // Campos específicos para RETENCION
-  nro_retencion: '',
-  // Campos específicos para CHEQUE  
-  banco: '',
-  sucursal: '',
-  localidad: '',
-  nro_cheque: '',
-  nro_cuenta: '',
-  titular: ''
+  // Arrays para múltiples cheques y retenciones
+  cheques: [],
+  retenciones: []
 })
 
 const errors = ref({})
@@ -418,23 +542,20 @@ const onTipoChange = () => {
   // Limpiar errores del tipo anterior
   clearSpecificErrors()
   
-  // Limpiar campos específicos según el tipo
+  // Inicializar arrays según el tipo
   if (formData.value.tipo === 'RETENCION') {
-    // Limpiar campos de cheque
-    formData.value.banco = ''
-    formData.value.sucursal = ''
-    formData.value.localidad = ''
-    formData.value.nro_cheque = ''
-    formData.value.nro_cuenta = ''
-    formData.value.titular = ''
+    // Inicializar con una retención vacía
+    formData.value.retenciones = [crearRetencionVacia()]
+    formData.value.cheques = []
     
     // Configurar concepto por defecto
     if (!formData.value.concepto) {
       formData.value.concepto = 'Retención'
     }
   } else if (formData.value.tipo === 'CHEQUE') {
-    // Limpiar campos de retención
-    formData.value.nro_retencion = ''
+    // Inicializar con un cheque vacío
+    formData.value.cheques = [crearChequeVacio()]
+    formData.value.retenciones = []
     
     // Configurar concepto por defecto
     if (!formData.value.concepto) {
@@ -444,14 +565,12 @@ const onTipoChange = () => {
 }
 
 const clearSpecificErrors = () => {
-  // Limpiar errores de campos específicos
-  delete errors.value.nro_retencion
-  delete errors.value.banco
-  delete errors.value.sucursal
-  delete errors.value.localidad
-  delete errors.value.nro_cheque
-  delete errors.value.nro_cuenta
-  delete errors.value.titular
+  // Limpiar todos los errores excepto el tipo
+  Object.keys(errors.value).forEach(key => {
+    if (key !== 'tipo') {
+      delete errors.value[key]
+    }
+  })
 }
 
 // Validación en tiempo real
@@ -466,125 +585,40 @@ const validateField = (field, value) => {
         delete errors.value.tipo
       }
       break
-    case 'nrocta':
-      if (!value || value.length < 4) {
-        errors.value.nrocta = 'El número de cuenta debe tener al menos 4 caracteres'
-      } else {
-        delete errors.value.nrocta
-      }
-      break
-    case 'concepto':
-      if (!value || value.length < 3) {
-        errors.value.concepto = 'El concepto debe tener al menos 3 caracteres'
-      } else {
-        delete errors.value.concepto
-      }
-      break
-    case 'fecha':
-      if (!value) {
-        errors.value.fecha = 'La fecha es requerida'
-      } else {
-        delete errors.value.fecha
-      }
-      break
-    case 'importe':
-      if (!value || value <= 0) {
-        errors.value.importe = 'El importe debe ser mayor a 0'
-      } else {
-        delete errors.value.importe
-      }
-      break
-    // Campos específicos para RETENCION
-    case 'nro_retencion':
-      if (formData.value.tipo === 'RETENCION') {
-        if (!value || value.length < 3) {
-          errors.value.nro_retencion = 'El número de retención debe tener al menos 3 caracteres'
-        } else {
-          delete errors.value.nro_retencion
-        }
-      }
-      break
-    // Campos específicos para CHEQUE
-    case 'banco':
-      if (formData.value.tipo === 'CHEQUE') {
-        if (!value || value.length < 3) {
-          errors.value.banco = 'El banco debe tener al menos 3 caracteres'
-        } else {
-          delete errors.value.banco
-        }
-      }
-      break
-    case 'sucursal':
-      if (formData.value.tipo === 'CHEQUE') {
-        if (!value || value.length < 2) {
-          errors.value.sucursal = 'La sucursal debe tener al menos 2 caracteres'
-        } else {
-          delete errors.value.sucursal
-        }
-      }
-      break
-    case 'localidad':
-      if (formData.value.tipo === 'CHEQUE') {
-        if (!value || value.length < 2) {
-          errors.value.localidad = 'La localidad debe tener al menos 2 caracteres'
-        } else {
-          delete errors.value.localidad
-        }
-      }
-      break
-    case 'nro_cheque':
-      if (formData.value.tipo === 'CHEQUE') {
-        if (!value || value.length < 4) {
-          errors.value.nro_cheque = 'El número de cheque debe tener al menos 4 caracteres'
-        } else {
-          delete errors.value.nro_cheque
-        }
-      }
-      break
-    case 'nro_cuenta':
-      if (formData.value.tipo === 'CHEQUE') {
-        if (!value || value.length < 6) {
-          errors.value.nro_cuenta = 'El número de cuenta debe tener al menos 6 caracteres'
-        } else {
-          delete errors.value.nro_cuenta
-        }
-      }
-      break
-    case 'titular':
-      if (formData.value.tipo === 'CHEQUE') {
-        if (!value || value.length < 3) {
-          errors.value.titular = 'El titular debe tener al menos 3 caracteres'
-        } else {
-          delete errors.value.titular
-        }
-      }
-      break
   }
 }
 
 // Validar formulario completo
 const isFormValid = computed(() => {
   const hasBasicErrors = Object.keys(errors.value).length === 0
-  const hasBasicFields = formData.value.tipo && 
-                        formData.value.nrocta && 
-                        formData.value.concepto && 
-                        formData.value.fecha && 
-                        formData.value.importe > 0
-
-  // Validar campos específicos según el tipo
+  
+  // Validar arrays según el tipo
   if (formData.value.tipo === 'RETENCION') {
-    return hasBasicErrors && hasBasicFields && formData.value.nro_retencion
+    const retencionesValidas = formData.value.retenciones.every(retencion => 
+      retencion.nrocta && 
+      retencion.concepto && 
+      retencion.nro_retencion && 
+      retencion.fecha && 
+      retencion.importe > 0
+    )
+    return hasBasicErrors && formData.value.tipo && retencionesValidas && formData.value.retenciones.length > 0
   } else if (formData.value.tipo === 'CHEQUE') {
-    return hasBasicErrors && hasBasicFields && 
-           formData.value.banco && 
-           formData.value.sucursal && 
-           formData.value.localidad && 
-           formData.value.nro_cheque && 
-           formData.value.nro_cuenta && 
-           formData.value.titular
+    const chequesValidos = formData.value.cheques.every(cheque => 
+      cheque.nrocta && 
+      cheque.concepto && 
+      cheque.banco && 
+      cheque.sucursal && 
+      cheque.localidad && 
+      cheque.nro_cheque && 
+      cheque.nro_cuenta && 
+      cheque.titular && 
+      cheque.fecha && 
+      cheque.importe > 0
+    )
+    return hasBasicErrors && formData.value.tipo && chequesValidos && formData.value.cheques.length > 0
   }
   
-  return hasBasicErrors && hasBasicFields
+  return hasBasicErrors && formData.value.tipo
 })
 
 // Función para obtener la clase CSS de la diferencia
@@ -596,110 +630,257 @@ const getDifferenceClass = (reparto) => {
   return 'text-gray-600'
 }
 
+// Funciones para manejar múltiples cheques/retenciones
+const agregarCheque = () => {
+  formData.value.cheques.push(crearChequeVacio())
+}
+
+const eliminarCheque = (index) => {
+  if (formData.value.cheques.length > 1) {
+    formData.value.cheques.splice(index, 1)
+  }
+}
+
+const agregarRetencion = () => {
+  formData.value.retenciones.push(crearRetencionVacia())
+}
+
+const eliminarRetencion = (index) => {
+  if (formData.value.retenciones.length > 1) {
+    formData.value.retenciones.splice(index, 1)
+  }
+}
+
 // Watchers para validación en tiempo real
 watch(() => formData.value.tipo, (newVal) => validateField('tipo', newVal))
-watch(() => formData.value.nrocta, (newVal) => validateField('nrocta', newVal))
-watch(() => formData.value.concepto, (newVal) => validateField('concepto', newVal))
-watch(() => formData.value.fecha, (newVal) => validateField('fecha', newVal))
-watch(() => formData.value.importe, (newVal) => validateField('importe', newVal))
-// Watchers para campos específicos
-watch(() => formData.value.nro_retencion, (newVal) => validateField('nro_retencion', newVal))
-watch(() => formData.value.banco, (newVal) => validateField('banco', newVal))
-watch(() => formData.value.sucursal, (newVal) => validateField('sucursal', newVal))
-watch(() => formData.value.localidad, (newVal) => validateField('localidad', newVal))
-watch(() => formData.value.nro_cheque, (newVal) => validateField('nro_cheque', newVal))
-watch(() => formData.value.nro_cuenta, (newVal) => validateField('nro_cuenta', newVal))
-watch(() => formData.value.titular, (newVal) => validateField('titular', newVal))
 
 // Llenar formulario cuando se abre el modal
 watch(() => props.reparto, (newReparto) => {
   if (newReparto && newReparto.movimientoFinanciero) {
     // Editando un movimiento existente
     const mov = newReparto.movimientoFinanciero
+    
+    // Inicializar con arrays vacíos
     formData.value = {
       tipo: mov.tipo || '',
-      nrocta: mov.nrocta || '',
-      concepto: mov.concepto || '',
-      fecha: mov.fecha || '',
-      importe: mov.importe || 0,
-      // Campos específicos para RETENCION
-      nro_retencion: mov.nro_retencion || '',
-      // Campos específicos para CHEQUE
-      banco: mov.banco || '',
-      sucursal: mov.sucursal || '',
-      localidad: mov.localidad || '',
-      nro_cheque: mov.nro_cheque || '',
-      nro_cuenta: mov.nro_cuenta || '',
-      titular: mov.titular || ''
+      cheques: [],
+      retenciones: []
+    }
+    
+    // Cargar datos existentes según el tipo
+    if (mov.tipo === 'CHEQUE') {
+      // Si es un movimiento antiguo (campos individuales), convertir a array
+      if (mov.banco || mov.nro_cheque) {
+        formData.value.cheques = [{
+          nrocta: mov.nrocta || '',
+          concepto: mov.concepto || '',
+          banco: mov.banco || '',
+          sucursal: mov.sucursal || '',
+          localidad: mov.localidad || '',
+          nro_cheque: mov.nro_cheque || '',
+          nro_cuenta: mov.nro_cuenta || '',
+          titular: mov.titular || '',
+          fecha: mov.fecha || '',
+          importe: mov.importe || 0
+        }]
+      } else if (mov.cheques && Array.isArray(mov.cheques)) {
+        // Si ya es un array, usarlo directamente
+        formData.value.cheques = [...mov.cheques]
+      }
+    } else if (mov.tipo === 'RETENCION') {
+      // Si es un movimiento antiguo (campos individuales), convertir a array
+      if (mov.nro_retencion) {
+        formData.value.retenciones = [{
+          nrocta: mov.nrocta || '',
+          concepto: mov.concepto || '',
+          nro_retencion: mov.nro_retencion || '',
+          fecha: mov.fecha || '',
+          importe: mov.importe || 0
+        }]
+      } else if (mov.retenciones && Array.isArray(mov.retenciones)) {
+        // Si ya es un array, usarlo directamente
+        formData.value.retenciones = [...mov.retenciones]
+      }
     }
   } else if (newReparto) {
     // Creando un nuevo movimiento
     const diferencia = Math.abs(newReparto.depositoReal - newReparto.depositoEsperado)
     formData.value = {
       tipo: '',
-      nrocta: '',
-      concepto: '',
-      fecha: new Date().toISOString().split('T')[0],
-      importe: diferencia > 0 ? diferencia : 0,
-      // Campos específicos para RETENCION
-      nro_retencion: '',
-      // Campos específicos para CHEQUE
-      banco: '',
-      sucursal: '',
-      localidad: '',
-      nro_cheque: '',
-      nro_cuenta: '',
-      titular: ''
+      cheques: [],
+      retenciones: []
     }
   }
   // Limpiar errores cuando se abre el modal
   errors.value = {}
 }, { immediate: true })
 
+// Watcher para movimientoTipo - aplicar tipo inicial
+watch(() => props.movimientoTipo, (nuevoTipo) => {
+  console.log('🎯 MovimientoTipo recibido:', nuevoTipo)
+  if (nuevoTipo && props.reparto && !props.reparto.movimientoFinanciero) {
+    // Solo aplicar si estamos creando un nuevo movimiento (no editando)
+    const tipoFinal = nuevoTipo === 'cheque' ? 'CHEQUE' : nuevoTipo === 'retencion' ? 'RETENCION' : ''
+    if (tipoFinal) {
+      console.log('🎯 Aplicando tipo inicial:', tipoFinal)
+      formData.value.tipo = tipoFinal
+      
+      // Inicializar arrays según el tipo
+      if (tipoFinal === 'CHEQUE') {
+        formData.value.cheques = [crearChequeVacio()]
+        formData.value.retenciones = []
+      } else if (tipoFinal === 'RETENCION') {
+        formData.value.retenciones = [crearRetencionVacia()]
+        formData.value.cheques = []
+      }
+      
+      validateField('tipo', tipoFinal)
+    }
+  }
+}, { immediate: true })
+
+// Funciones auxiliares para crear elementos vacíos
+const crearChequeVacio = () => ({
+  nrocta: '',
+  concepto: '',
+  banco: '',
+  sucursal: '',
+  localidad: '',
+  nro_cheque: '',
+  nro_cuenta: '',
+  titular: '',
+  fecha: new Date().toISOString().split('T')[0],
+  importe: 0
+})
+
+const crearRetencionVacia = () => ({
+  nrocta: '',
+  concepto: '',
+  nro_retencion: '',
+  fecha: new Date().toISOString().split('T')[0],
+  importe: 0
+})
+
 const handleSubmit = () => {
-  // Validar todos los campos básicos
-  validateField('tipo', formData.value.tipo)
-  validateField('nrocta', formData.value.nrocta)
-  validateField('concepto', formData.value.concepto)
-  validateField('fecha', formData.value.fecha)
-  validateField('importe', formData.value.importe)
+  console.log('🚀 [MODAL] ============ INICIANDO SUBMIT ============')
+  console.log('🚀 [MODAL] formData.value:', formData.value)
+  console.log('🚀 [MODAL] props.reparto:', props.reparto)
   
-  // Validar campos específicos según el tipo
-  if (formData.value.tipo === 'RETENCION') {
-    validateField('nro_retencion', formData.value.nro_retencion)
-  } else if (formData.value.tipo === 'CHEQUE') {
-    validateField('banco', formData.value.banco)
-    validateField('sucursal', formData.value.sucursal)
-    validateField('localidad', formData.value.localidad)
-    validateField('nro_cheque', formData.value.nro_cheque)
-    validateField('nro_cuenta', formData.value.nro_cuenta)
-    validateField('titular', formData.value.titular)
+  // Validar todos los campos de todos los elementos del array
+  let allValid = true
+  
+  if (formData.value.tipo === 'CHEQUE') {
+    console.log('🔍 [MODAL] Validando CHEQUES, cantidad:', formData.value.cheques.length)
+    formData.value.cheques.forEach((cheque, index) => {
+      console.log(`🔍 [MODAL] Validando cheque ${index + 1}:`, cheque)
+      if (!cheque.nrocta || !cheque.concepto || !cheque.banco || 
+          !cheque.sucursal || !cheque.localidad || !cheque.nro_cheque || 
+          !cheque.nro_cuenta || !cheque.titular || !cheque.fecha || !cheque.importe) {
+        allValid = false
+        console.error(`❌ Cheque ${index + 1} tiene campos incompletos`)
+      }
+    })
+  } else if (formData.value.tipo === 'RETENCION') {
+    console.log('🔍 [MODAL] Validando RETENCIONES, cantidad:', formData.value.retenciones.length)
+    formData.value.retenciones.forEach((retencion, index) => {
+      console.log(`🔍 [MODAL] Validando retención ${index + 1}:`, retencion)
+      if (!retencion.nrocta || !retencion.concepto || !retencion.nro_retencion || 
+          !retencion.fecha || !retencion.importe) {
+        allValid = false
+        console.error(`❌ Retención ${index + 1} tiene campos incompletos`)
+      }
+    })
   }
   
-  if (isFormValid.value) {
-    // Crear objeto con solo los campos necesarios según el tipo
+  console.log('🔍 [MODAL] Resultado de validación allValid:', allValid)
+  
+  if (allValid) {
+    // Obtener deposit_id del reparto (usando la misma lógica que RepartoRow)
+    const depositId = getDepositId(props.reparto)
+    console.log('🏗️ [MODAL] deposit_id obtenido:', depositId)
+    
+    if (!depositId) {
+      console.error('❌ [MODAL] No se pudo obtener deposit_id del reparto')
+      alert('Error: No se pudo identificar el reparto. Por favor, intenta de nuevo.')
+      return
+    }
+    
+    // Crear estructura EXACTA que espera tu backend
     const movimientoData = {
-      tipo: formData.value.tipo,
-      nrocta: formData.value.nrocta,
-      concepto: formData.value.concepto,
-      fecha: formData.value.fecha,
-      importe: formData.value.importe
+      tipo_concepto: formData.value.tipo === 'CHEQUE' ? 'CHE' : 'RIB',
+      deposit_id: depositId
     }
     
-    // Añadir campos específicos según el tipo
-    if (formData.value.tipo === 'RETENCION') {
-      movimientoData.nro_retencion = formData.value.nro_retencion
-    } else if (formData.value.tipo === 'CHEQUE') {
-      movimientoData.banco = formData.value.banco
-      movimientoData.sucursal = formData.value.sucursal
-      movimientoData.localidad = formData.value.localidad
-      movimientoData.nro_cheque = formData.value.nro_cheque
-      movimientoData.nro_cuenta = formData.value.nro_cuenta
-      movimientoData.titular = formData.value.titular
+    console.log('🏗️ [MODAL] Estructura base creada:', movimientoData)
+    
+    if (formData.value.tipo === 'CHEQUE') {
+      // Enviar array de cheques según la estructura esperada por el backend
+      movimientoData.cheques = formData.value.cheques.map(cheque => ({
+        nrocta: parseInt(cheque.nrocta),
+        concepto: cheque.concepto,
+        banco: cheque.banco,
+        sucursal: cheque.sucursal,
+        localidad: cheque.localidad,
+        nro_cheque: cheque.nro_cheque,
+        nro_cuenta: parseInt(cheque.nro_cuenta),
+        titular: cheque.titular,
+        fecha: cheque.fecha,
+        importe: parseFloat(cheque.importe)
+      }))
+    } else if (formData.value.tipo === 'RETENCION') {
+      // Enviar array de retenciones según la estructura esperada por el backend
+      movimientoData.retenciones = formData.value.retenciones.map(retencion => ({
+        nrocta: parseInt(retencion.nrocta),
+        concepto: retencion.concepto,
+        nro_retencion: parseInt(retencion.nro_retencion),
+        fecha: retencion.fecha,
+        importe: parseFloat(retencion.importe)
+      }))
     }
     
+    console.log('📤 Enviando al backend (estructura exacta esperada):', movimientoData)
+    console.log('�️ Estructura del payload:', {
+      tipo_concepto: movimientoData.tipo_concepto,
+      deposit_id: movimientoData.deposit_id,
+      cheques_count: movimientoData.cheques?.length || 0,
+      retenciones_count: movimientoData.retenciones?.length || 0
+    })
+    console.log('📤 [MODAL] A punto de emitir evento save...')
     emit('save', movimientoData)
+    console.log('✅ [MODAL] Evento save emitido correctamente')
+  } else {
+    console.error('❌ [MODAL] Validación falló, no se puede enviar')
   }
+}
+
+// Función para obtener el deposit_id del reparto (misma lógica que RepartoRow)
+const getDepositId = (reparto) => {
+  if (!reparto) {
+    console.warn('❌ [EditModal] Reparto no definido para obtener deposit_id')
+    return null
+  }
+  
+  // CASO 1: El objeto ES directamente un depósito (estructura real de la API)
+  if (reparto.deposit_id) {
+    console.log(`✅ [EditModal] Usando deposit_id: ${reparto.deposit_id}`)
+    return reparto.deposit_id
+  }
+  
+  // CASO 2: Estructura anidada - usar deposits[0].deposit_id si existe
+  if (reparto.deposits && reparto.deposits.length > 0 && reparto.deposits[0].deposit_id) {
+    console.log(`✅ [EditModal] Usando deposits[0].deposit_id: ${reparto.deposits[0].deposit_id}`)
+    return reparto.deposits[0].deposit_id
+  }
+  
+  // CASO 3: Fallback - usar deposits[0].id si existe
+  if (reparto.deposits && reparto.deposits.length > 0 && reparto.deposits[0].id) {
+    console.log(`⚠️ [EditModal] Fallback deposits[0].id: ${reparto.deposits[0].id}`)
+    return reparto.deposits[0].id
+  }
+  
+  // CASO 4: Fallback final - usar el ID del reparto
+  console.warn(`❌ [EditModal] Fallback reparto.id: ${reparto.id} - Puede fallar`)
+  return reparto.id
 }
 </script>
 

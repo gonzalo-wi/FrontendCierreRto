@@ -49,7 +49,7 @@
       <!-- Totales por Planta - Solo mostrar en vista principal -->
       <TotalsView 
         v-if="showTotals"
-        :fecha-seleccionada="fechaSeleccionada?.fechaAPI"
+        :fecha-seleccionada="props.title.toLowerCase().includes('jumillano') ? fechaSeleccionada?.fechaBackend : fechaSeleccionada?.fechaAPI"
       />
       
       <!-- Estadísticas Dashboard -->
@@ -170,6 +170,8 @@
           @refresh="fetchRepartos"
           @edit="openEditModal"
           @delete-movement="deleteMovement"
+          @toggle-comprobantes="handleToggleComprobantes"
+          @estado-actualizado="handleEstadoActualizado"
         />
         
         <!-- Botón Procesar debajo de la tabla -->
@@ -229,17 +231,26 @@
         :is-visible="showModal"
         :reparto="selectedReparto"
         :saving="saving"
+        :movimiento-tipo="modalMovimientoTipo"
         @close="closeModal"
         @save="saveMovement"
       />
     </div>
+
+    <!-- Modal de Comprobantes -->
+    <ComprobantesModal 
+      v-if="showComprobantesModal"
+      :reparto="selectedRepartoComprobantes"
+      @close="closeComprobantesModal"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { config } from '../config/config.js'
 import RepartoTable from '../components/RepartoTable.vue'
+import ComprobantesModal from '../components/ComprobantesModal.vue'
 import EditMovementModal from '../components/EditMovementModal.vue'
 import DateSelector from '../components/DateSelector.vue'
 import TotalsView from '../components/TotalsView.vue'
@@ -266,11 +277,17 @@ const loading = ref(false)
 const error = ref(null)
 const procesando = ref(false)
 const fechaSeleccionada = ref(null) // Fecha seleccionada por el usuario
+const isFetching = ref(false) // Flag para prevenir llamadas múltiples
 
 // Estado del modal
 const showModal = ref(false)
 const selectedReparto = ref(null)
 const saving = ref(false)
+const modalMovimientoTipo = ref(null) // cheque | retencion | null
+
+// Estados para modal de comprobantes
+const showComprobantesModal = ref(false)
+const selectedRepartoComprobantes = ref(null)
 
 // Propiedades computadas para estadísticas
 const exactCount = computed(() => {
@@ -300,148 +317,55 @@ const repartosListos = computed(() => {
 
 // Función para obtener los repartos
 const fetchRepartos = async () => {
+  // Prevenir llamadas múltiples simultáneas
+  if (isFetching.value) {
+    console.log('⚠️ [FETCH] Ya hay una llamada en progreso, ignorando...')
+    return
+  }
+  
+  const callId = Math.random().toString(36).substr(2, 9)
+  isFetching.value = true
   loading.value = true
   error.value = null
   
   try {
-    console.log('🔄 Cargando datos para', props.title, 'fecha:', fechaSeleccionada.value?.fechaAPI || 'fecha actual')
+    console.log(`🔄 [FETCH-${callId}] Iniciando carga de datos para`, props.title, 'fecha:', fechaSeleccionada.value?.fechaBackend || fechaSeleccionada.value?.fechaAPI || 'fecha actual')
+    console.log(`🔄 [FETCH-${callId}] Estado inicial repartos.value.length:`, repartos.value.length)
     
-    // En modo desarrollo, usar datos simulados si el backend no está disponible
-    if (config.DEV_MODE) {
-      console.log('🧪 Modo desarrollo: intentando conectar con API real para', props.title)
-      
-      try {
-        // Intentar usar la API real con la fecha seleccionada
-        const data = await props.service.getRepartos(fechaSeleccionada.value?.fechaAPI)
-        repartos.value = data
-        console.log('✅ Datos cargados desde API real para', props.title, '- Total:', data.length, 'repartos')
-        return
-      } catch (apiError) {
-        console.log('⚠️ API real no disponible, usando datos simulados para', props.title, '- Error:', apiError.message)
-        
-        // Simular delay de carga para datos simulados
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        // Datos simulados específicos por sucursal
-        const datosSimulados = {
-          'Ciudadela': [
-            {
-              id: 'JUM-001',
-              idReparto: 'RTO-JUM-20240115',
-              fechaReparto: '2024-01-15',
-              depositoEsperado: 15000,
-              depositoReal: 15000,
-            diferencia: 0,
-            estado: 'EXACTO',
-            movimientoFinanciero: null
-          },
-          {
-            id: 'JUM-002',
-            idReparto: 'RTO-JUM-20240116',
-            fechaReparto: '2024-01-16', 
-            depositoEsperado: 12000,
-            depositoReal: 11800,
-            diferencia: -200,
-            estado: 'DIFERENCIA',
-            movimientoFinanciero: {
-              tipo: 'RETENCION',
-              importe: 200,
-              concepto: 'Retención por combustible',
-              fecha: '2024-01-16',
-              nro_retencion: 'RET-001'
-            }
-          },
-          {
-            id: 'JUM-003',
-            idReparto: 'RTO-JUM-20240117',
-            fechaReparto: '2024-01-17',
-            depositoEsperado: 18000,
-            depositoReal: 18500,
-            diferencia: 500,
-            estado: 'DIFERENCIA',
-            movimientoFinanciero: null
-          }
-        ],
-        'NAFA': [
-          {
-            id: 'NAF-001',
-            idReparto: 'RTO-NAF-20240115',
-            fechaReparto: '2024-01-15',
-            depositoEsperado: 22000,
-            depositoReal: 21700,
-            diferencia: -300,
-            estado: 'DIFERENCIA',
-            movimientoFinanciero: {
-              tipo: 'CHEQUE',
-              importe: 300,
-              concepto: 'Pago con cheque',
-              fecha: '2024-01-15',
-              banco: 'Banco Nación',
-              nro_cheque: '12345678'
-            }
-          },
-          {
-            id: 'NAF-002',
-            idReparto: 'RTO-NAF-20240116',
-            fechaReparto: '2024-01-16',
-            depositoEsperado: 19500,
-            depositoReal: 19500,
-            diferencia: 0,
-            estado: 'EXACTO',
-            movimientoFinanciero: null
-          }
-        ],
-        'LaPlata': [
-          {
-            id: 'LP-001',
-            idReparto: 'RTO-LP-20240115',
-            fechaReparto: '2024-01-15',
-            depositoEsperado: 25000,
-            depositoReal: 24800,
-            diferencia: -200,
-            estado: 'DIFERENCIA',
-            movimientoFinanciero: {
-              tipo: 'RETENCION',
-              importe: 200,
-              concepto: 'Retención IIBB',
-              fecha: '2024-01-15',
-              nro_retencion: 'RET-LP-001'
-            }
-          }
-        ]
-        }
-        
-        repartos.value = datosSimulados[props.title] || datosSimulados['Ciudadela']
-        return
-      }
-    } else {
-      // En producción, usar la API directamente con la fecha seleccionada
-      const data = await props.service.getRepartos(fechaSeleccionada.value?.fechaAPI)
-      repartos.value = data
+    // SIEMPRE intentar usar la API real primero
+    console.log(`🔌 [FETCH-${callId}] Conectando con API real para`, props.title)
+    
+    // Todos los servicios ahora usan el nuevo backend, así que usar fechaBackend (YYYY-MM-DD)
+    const fechaParaServicio = fechaSeleccionada.value?.fechaBackend
+    
+    console.log(`📅 [FETCH-${callId}] Fecha a enviar al servicio:`, fechaParaServicio, '(servicio:', props.title, ')')
+    
+    const data = await props.service.getRepartos(fechaParaServicio)
+    
+    console.log(`✅ [FETCH-${callId}] Datos recibidos de API real:`, data.length, 'repartos')
+    if (data.length > 0) {
+      console.log(`✅ [FETCH-${callId}] Primer reparto de ejemplo:`, data[0])
     }
-  } catch (err) {
-    console.error('Error fetching repartos:', err)
     
-    // En caso de error, si estamos en desarrollo, mostrar datos de ejemplo
+    // Asignar los datos y logging detallado
+    const prevLength = repartos.value.length
+    repartos.value = data
+    console.log(`📊 [FETCH-${callId}] Datos asignados - Antes:`, prevLength, 'Después:', repartos.value.length)
+    
+    console.log(`✅ [FETCH-${callId}] Carga completada exitosamente para`, props.title)
+    
+  } catch (err) {
+    console.error(`❌ [FETCH-${callId}] Error cargando datos de API real:`, err)
+    error.value = err.message || 'Error al cargar los repartos'
+    
+    // En desarrollo, mostrar el error pero NO usar datos simulados
     if (config.DEV_MODE) {
-      console.log('Error conectando al backend, usando datos simulados de fallback para', props.title)
-      repartos.value = [
-        {
-          id: `${props.title}-FB-001`,
-          idReparto: `RTO-${props.title.toUpperCase()}-FALLBACK`,
-          fechaReparto: new Date().toISOString().split('T')[0],
-          depositoEsperado: 15000,
-          depositoReal: 15000,
-          diferencia: 0,
-          estado: 'EXACTO',
-          movimientoFinanciero: null
-        }
-      ]
-    } else {
-      error.value = err.message || 'Error al cargar los repartos'
+      console.log(`⚠️ [FETCH-${callId}] Error en API real. Mostrando estado de error (no datos simulados)`)
     }
   } finally {
     loading.value = false
+    isFetching.value = false
+    console.log(`🏁 [FETCH-${callId}] Finalizando carga - loading:`, loading.value, 'repartos:', repartos.value.length)
   }
 }
 
@@ -499,8 +423,20 @@ const procesarRepartos = async () => {
 }
 
 // Función para abrir modal de edición
-const openEditModal = (reparto) => {
+// Puede recibir reparto o { reparto, movimientoTipo }
+const openEditModal = (repartoOrPayload, movimientoTipoArg) => {
+  let reparto = repartoOrPayload
+  let movimientoTipo = movimientoTipoArg
+  
+  // Si viene como objeto { reparto, movimientoTipo }
+  if (repartoOrPayload && typeof repartoOrPayload === 'object' && 'reparto' in repartoOrPayload) {
+    reparto = repartoOrPayload.reparto
+    movimientoTipo = repartoOrPayload.movimientoTipo
+  }
+  
+  console.log('🔥 Abriendo modal con:', { reparto: reparto?.idReparto, movimientoTipo })
   selectedReparto.value = reparto
+  modalMovimientoTipo.value = movimientoTipo || null
   showModal.value = true
 }
 
@@ -508,41 +444,80 @@ const openEditModal = (reparto) => {
 const closeModal = () => {
   showModal.value = false
   selectedReparto.value = null
+  modalMovimientoTipo.value = null
+}
+
+// Funciones para modal de comprobantes
+const handleToggleComprobantes = (event) => {
+  console.log('🔍 Evento completo recibido:', event)
+  console.log('🔍 Abriendo comprobantes para reparto número:', event.reparto)
+  
+  // Usar el número del reparto que ya viene normalizado
+  selectedRepartoComprobantes.value = event.reparto
+  showComprobantesModal.value = true
+}
+
+// Función para manejar actualización de estado de repartos
+const handleEstadoActualizado = (event) => {
+  console.log('🔄 Estado de reparto actualizado:', event)
+  
+  // Buscar y actualizar el reparto en la lista local
+  const repartoIndex = repartos.value.findIndex(r => r.id === event.repartoId)
+  if (repartoIndex !== -1) {
+    // Actualizar el estado del reparto
+    repartos.value[repartoIndex].estado = event.estadoNuevo
+    console.log(`✅ Estado del reparto ${event.repartoId} actualizado localmente a ${event.estadoNuevo}`)
+  }
+  
+  // Opcionalmente, refrescar los datos desde el servidor
+  // fetchRepartos()
+}
+
+const closeComprobantesModal = () => {
+  showComprobantesModal.value = false
+  selectedRepartoComprobantes.value = null
 }
 
 // Función para guardar el movimiento
 const saveMovement = async (movementData) => {
-  if (!selectedReparto.value) return
+  console.log('🚀 [REPARTO_VIEW] ============ SAVE MOVEMENT INICIADO ============')
+  console.log('🚀 [REPARTO_VIEW] movementData recibido:', movementData)
+  console.log('🚀 [REPARTO_VIEW] selectedReparto.value:', selectedReparto.value)
+  
+  if (!selectedReparto.value) {
+    console.error('❌ [REPARTO_VIEW] selectedReparto.value es null')
+    return
+  }
   
   saving.value = true
+  console.log('🚀 [REPARTO_VIEW] saving.value establecido a true')
   
   try {
     let updatedMovimiento
     
+    // Guardar referencia al reparto antes de que se limpie en closeModal
+    const repartoActual = selectedReparto.value
+    console.log('🚀 [REPARTO_VIEW] repartoActual:', repartoActual)
+    
     // En modo desarrollo, simular guardado
     if (config.DEV_MODE) {
-      console.log('Modo desarrollo: simulando guardado de movimiento para', selectedReparto.value.idReparto)
+      console.log('🔧 [REPARTO_VIEW] Modo desarrollo: simulando guardado de movimiento para', repartoActual.idReparto)
       await new Promise(resolve => setTimeout(resolve, 1000))
       updatedMovimiento = { ...movementData, id: Date.now() }
     } else {
-      // Determinar si es creación o actualización
-      if (selectedReparto.value.movimientoFinanciero) {
-        // Actualizar movimiento existente
-        updatedMovimiento = await props.service.updateMovimientoFinanciero(
-          selectedReparto.value.idReparto, 
-          movementData
-        )
-      } else {
-        // Crear nuevo movimiento
-        updatedMovimiento = await props.service.createMovimientoFinanciero(
-          selectedReparto.value.idReparto, 
-          movementData
-        )
-      }
+      console.log('🌐 [REPARTO_VIEW] Modo producción: enviando al backend real')
+      
+      // Por ahora, siempre crear nuevos movimientos (no actualizar)
+      // TODO: Implementar lógica de actualización cuando el backend lo soporte
+      console.log('➕ [REPARTO_VIEW] Creando movimiento financiero')
+      updatedMovimiento = await props.service.createMovimientoFinanciero(
+        repartoActual.idReparto, 
+        movementData
+      )
     }
     
     // Actualizar la lista local
-    const index = repartos.value.findIndex(r => r.idReparto === selectedReparto.value.idReparto)
+    const index = repartos.value.findIndex(r => r.idReparto === repartoActual.idReparto)
     if (index !== -1) {
       repartos.value[index] = {
         ...repartos.value[index],
@@ -554,8 +529,8 @@ const saveMovement = async (movementData) => {
     closeModal()
     
     // Mostrar notificación de éxito más profesional
-    const tipoMovimiento = movementData.tipo === 'RETENCION' ? 'Retención' : 'Cheque'
-    console.log(`✅ ${tipoMovimiento} guardado correctamente para reparto ${selectedReparto.value.idReparto}`)
+    const tipoMovimiento = movementData.tipo_concepto === 'RIB' ? 'Retención' : 'Cheque'
+    console.log(`✅ ${tipoMovimiento} guardado correctamente para reparto ${repartoActual.idReparto}`)
     
   } catch (err) {
     console.error('Error al guardar movimiento financiero:', err)
@@ -626,6 +601,27 @@ const onFechaSeleccionada = (fechaData) => {
 onMounted(() => {
   fetchRepartos()
 })
+
+// Watcher para detectar cambios en repartos
+watch(repartos, (newRepartos, oldRepartos) => {
+  console.log('👀 [WATCHER] Cambio detectado en repartos:')
+  console.log('  - Anterior:', oldRepartos?.length || 0, 'repartos')
+  console.log('  - Nuevo:', newRepartos?.length || 0, 'repartos')
+  
+  if (newRepartos?.length > 0) {
+    console.log('  - Primer reparto nuevo:', newRepartos[0])
+  }
+  
+  // Detectar si se están reemplazando datos reales con simulados
+  if (oldRepartos?.length > 0 && newRepartos?.length > 0) {
+    const oldHasRealIds = oldRepartos.some(r => r.idReparto && !r.idReparto.includes('FALLBACK'))
+    const newHasSimulatedIds = newRepartos.some(r => r.idReparto && r.idReparto.includes('FALLBACK'))
+    
+    if (oldHasRealIds && newHasSimulatedIds) {
+      console.warn('🚨 [WATCHER] ALERTA: Datos reales reemplazados por simulados!')
+    }
+  }
+}, { deep: true })
 </script>
 
 <style scoped>

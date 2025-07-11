@@ -4,6 +4,7 @@ import TablaNafaViews from '../views/TablaNafaViews.vue'
 import TablaLaPlataViews from '../views/TablaLaPlataViews.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
+import ComprobantesDemo from '../views/ComprobantesDemo.vue'
 
 const routes = [
   {
@@ -34,6 +35,11 @@ const routes = [
   {
     path: '/la-plata',
     redirect: '/laplata'
+  },
+  {
+    path: '/comprobantes-demo',
+    name: 'ComprobantesDemo',
+    component: ComprobantesDemo
   }
 ]
 

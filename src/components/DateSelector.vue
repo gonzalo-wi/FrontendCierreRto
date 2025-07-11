@@ -121,7 +121,8 @@ export default {
       const fechaAPI = this.convertirFechaParaAPI(this.fechaSeleccionada)
       this.$emit('fecha-seleccionada', {
         fechaInput: this.fechaSeleccionada,      // YYYY-MM-DD
-        fechaAPI: fechaAPI,                      // MM-DD-YYYY
+        fechaAPI: fechaAPI,                      // MM-DD-YYYY (para APIs externas)
+        fechaBackend: this.fechaSeleccionada,    // YYYY-MM-DD (para nuestro backend)
         fechaDisplay: this.fechaFormateada       // Formato legible
       })
     }

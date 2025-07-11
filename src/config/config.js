@@ -4,7 +4,7 @@ export const config = {
   API_BASE_URL: '/api',
   
   // Modo de desarrollo - cambiar a false cuando el backend esté listo
-  DEV_MODE: true,
+  DEV_MODE: false,
   
   // Endpoints de autenticación
   AUTH_ENDPOINTS: {

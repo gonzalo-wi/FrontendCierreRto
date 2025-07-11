@@ -1,11 +1,11 @@
 import axios from 'axios'
 
-// Configuración base de Axios - Usando proxy de Vite
-const API_BASE_URL = '/api'
+// Configuración base de Axios - Usando proxy de Vite temporalmente hasta configurar CORS
+const API_BASE_URL = '/api-backend'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, 
+  timeout: 60000, // Aumentado a 60 segundos para manejar cargas grandes de datos
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -34,31 +34,198 @@ function getCurrentDate() {
 
 export default {
   /**
-   * Obtiene los repartos de NAFA desde la API real
-   * @param {string} date - Fecha en formato MM-DD-YYYY (opcional, por defecto fecha actual)
+   * Obtiene los repartos de NAFA desde el nuevo endpoint del backend
+   * @param {string} date - Fecha en formato YYYY-MM-DD (opcional, por defecto fecha actual)
    * @returns {Promise} 
    */
   async getRepartos(date = null) {
     try {
-      // Si no se proporciona fecha, usar la fecha actual en formato MM-DD-YYYY
-      const fechaConsulta = date || this.getFechaActual()
+      // Convertir fecha al formato esperado por el nuevo endpoint (YYYY-MM-DD)
+      const fechaConsulta = date ? this.convertToBackendDateFormat(date) : this.getTodayBackendFormat()
       
-      console.log('🔍 Consultando API de NAFA para fecha:', fechaConsulta)
+      console.log('🔍 [NAFA] ============ INICIANDO LLAMADA A BACKEND ============')
+      console.log('🔍 [NAFA] Fecha recibida:', date)
+      console.log('🔍 [NAFA] Fecha convertida para backend:', fechaConsulta)
+      console.log('🔍 [NAFA] URL completa:', `${API_BASE_URL}/deposits/db/by-plant?date=${fechaConsulta}`)
       
-      const response = await apiClient.get(`/deposits/nafa?date=${fechaConsulta}`)
+      // Usar el nuevo endpoint que devuelve datos estructurados por planta
+      const response = await apiClient.get(`/deposits/db/by-plant?date=${fechaConsulta}`)
       
-      console.log('✅ Respuesta de API NAFA recibida:', Object.keys(response.data).length, 'identificadores')
+      console.log('✅ [NAFA] Respuesta del backend recibida:', response.data)
       
-      // Transformar los datos de la API al formato esperado por el frontend
-      const repartos = await this.transformApiDataToRepartos(response.data, fechaConsulta)
+      // Verificar que tenemos datos de nafa
+      if (!response.data || !response.data.plants || !response.data.plants.nafa || !response.data.plants.nafa.deposits || response.data.plants.nafa.deposits.length === 0) {
+        console.log('❌ [NAFA] No se encontraron datos de NAFA en el nuevo backend para la fecha:', fechaConsulta)
+        console.log('🔄 [NAFA] Intentando fallback a API antigua...')
+        return await this.getRepartosFromOldAPI(date)
+      }
       
-      console.log('📊 Repartos transformados:', repartos.length, 'repartos encontrados')
+      const nafaData = response.data.plants.nafa
+      console.log('📊 [NAFA] Datos de NAFA encontrados:', nafaData.count, 'depósitos totales')
+      
+      // Transformar los datos del nuevo formato al formato esperado por el frontend
+      const repartos = await this.transformBackendDataToRepartos(nafaData, fechaConsulta)
+      
+      console.log('📊 [NAFA] Repartos transformados:', repartos.length, 'repartos encontrados')
       
       return repartos
     } catch (error) {
-      console.error('❌ Error al obtener repartos de NAFA:', error)
-      throw error
+      console.error('❌ [NAFA] Error detallado al obtener repartos:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack
+      })
+      
+      // Si hay error con el nuevo backend, intentar API antigua
+      console.log('🔄 [NAFA] Error en nuevo backend, intentando fallback a API antigua...')
+      try {
+        return await this.getRepartosFromOldAPI(date)
+      } catch (fallbackError) {
+        console.error('❌ [NAFA] Error también en API antigua:', fallbackError)
+        throw error // Lanzar el error original
+      }
     }
+  },
+
+  /**
+   * Convierte fecha de MM-DD-YYYY a YYYY-MM-DD
+   * @param {string} date - Fecha en formato MM-DD-YYYY
+   * @returns {string} Fecha en formato YYYY-MM-DD
+   */
+  convertToBackendDateFormat(date) {
+    if (!date) return this.getTodayBackendFormat()
+    
+    // Si ya está en formato YYYY-MM-DD, devolverlo tal como está
+    if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return date
+    }
+    
+    // Convertir de MM-DD-YYYY a YYYY-MM-DD
+    const [month, day, year] = date.split('-')
+    return `${year}-${month}-${day}`
+  },
+
+  /**
+   * Obtiene la fecha de hoy en formato YYYY-MM-DD
+   * @returns {string} Fecha de hoy
+   */
+  getTodayBackendFormat() {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  },
+
+  /**
+   * Transforma los datos del nuevo backend al formato esperado por el frontend
+   * @param {Object} nafaData - Datos de NAFA del backend
+   * @param {string} fecha - Fecha de consulta
+   * @returns {Array} Array de repartos transformados
+   */
+  async transformBackendDataToRepartos(nafaData, fecha) {
+    const repartos = []
+    
+    // Verificar que tenemos depósitos
+    if (!nafaData.deposits || !Array.isArray(nafaData.deposits)) {
+      console.log('❌ [NAFA] No hay depósitos en los datos')
+      return repartos
+    }
+    
+    // Agrupar depósitos por número de reparto
+    const repartosPorNumero = {}
+    
+    nafaData.deposits.forEach(deposit => {
+      // Extraer número de reparto del deposit_id (ej: "39049819" -> extraer número de reparto)
+      let numeroReparto = null
+      
+      // Si el backend envía el número de reparto directamente
+      if (deposit.numero_reparto) {
+        numeroReparto = deposit.numero_reparto
+      } else if (deposit.rto || deposit.rtoNumber) {
+        numeroReparto = deposit.rto || deposit.rtoNumber
+      } else if (deposit.user_name) {
+        // Extraer número de reparto del user_name (ej: "RTO 414, 414" -> "414")
+        const userNameMatch = deposit.user_name.match(/RTO\s+(\d+)/)
+        numeroReparto = userNameMatch ? userNameMatch[1] : null
+      } else {
+        // Como último recurso, usar los últimos 2-3 dígitos del deposit_id
+        // Esto es una aproximación, idealmente el backend debería enviar el número de reparto
+        const depositIdStr = String(deposit.deposit_id)
+        numeroReparto = depositIdStr.slice(-2) // Tomar los últimos 2 dígitos
+      }
+      
+      // Si no se pudo extraer el número de reparto, saltar este depósito
+      if (!numeroReparto) {
+        console.warn('⚠️ [NAFA] No se pudo extraer número de reparto de:', deposit)
+        return
+      }
+      
+      // Asegurar que numeroReparto es string para padStart
+      const numeroRepartoStr = String(numeroReparto)
+      const repartoKey = `RTO ${numeroRepartoStr.padStart(3, '0')}`
+      
+      if (!repartosPorNumero[repartoKey]) {
+        repartosPorNumero[repartoKey] = {
+          id: `nafa-${numeroRepartoStr}`,
+          idReparto: repartoKey,
+          fechaReparto: fecha,
+          numeroReparto: numeroRepartoStr,
+          depositoReal: 0,
+          depositoEsperado: 0,
+          diferencia: 0,
+          estado: 'PENDIENTE',
+          movimientoFinanciero: null,
+          deposits: []
+        }
+      }
+      
+      // Usar los valores calculados por el backend
+      const amount = parseFloat(deposit.total_amount) || 0
+      const esperado = parseFloat(deposit.deposit_esperado) || 0
+      const diferencia = parseFloat(deposit.diferencia) || 0
+      
+      repartosPorNumero[repartoKey].depositoReal += amount
+      repartosPorNumero[repartoKey].depositoEsperado += esperado
+      repartosPorNumero[repartoKey].diferencia += diferencia
+      
+      // El estado del reparto será el último estado encontrado
+      // O se podría implementar lógica más compleja para determinar el estado del grupo
+      repartosPorNumero[repartoKey].estado = deposit.estado || 'PENDIENTE'
+      
+      // Agregar información adicional del backend
+      const depositInfo = {
+        ...deposit,
+        tieneDiferencia: deposit.tiene_diferencia || false
+      }
+      
+      repartosPorNumero[repartoKey].deposits.push(depositInfo)
+    })
+    
+    // Convertir a array y calcular estados finales
+    Object.values(repartosPorNumero).forEach(reparto => {
+      // Determinar el estado final del reparto basado en todos sus depósitos
+      const estadosDepositos = reparto.deposits.map(d => d.estado)
+      const tieneDiferencias = reparto.deposits.some(d => d.tiene_diferencia)
+      
+      // Lógica para determinar el estado del reparto
+      if (estadosDepositos.every(estado => estado === 'LISTO')) {
+        reparto.estado = 'LISTO'
+      } else if (estadosDepositos.some(estado => estado === 'ENVIADO')) {
+        reparto.estado = 'ENVIADO'
+      } else if (tieneDiferencias) {
+        reparto.estado = reparto.diferencia === 0 ? 'EXACTO' : 
+                        reparto.diferencia > 0 ? 'SOBRANTE' : 'FALTANTE'
+      } else {
+        reparto.estado = 'PENDIENTE'
+      }
+      
+      repartos.push(reparto)
+    })
+    
+    console.log('🔧 [NAFA] Datos transformados:', repartos)
+    return repartos
   },
 
   /**
@@ -70,222 +237,119 @@ export default {
   },
 
   /**
-   * Transforma los datos de la API al formato esperado por el frontend
-   * @param {Object} apiData - Datos de la API
-   * @param {string} fecha - Fecha de consulta
-   * @returns {Array} Array de repartos transformados
+   * Fallback a API antigua cuando el nuevo backend no tiene datos
+   * @param {string} date - Fecha en formato YYYY-MM-DD o MM-DD-YYYY
+   * @returns {Promise<Array>} Array de repartos (vacío por ahora)
    */
-  async transformApiDataToRepartos(apiData, fecha) {
-    const repartos = []
+  async getRepartosFromOldAPI(date = null) {
+    console.log('🔄 [NAFA] Ejecutando fallback a API antigua...')
+    console.log('⚠️ [NAFA] API antigua no implementada aún - devolviendo array vacío')
     
-    // Obtener montos esperados para esta fecha (siempre 0 para NAFA)
-    const montosEsperados = await this.getMontoEsperadoPorReparto(fecha)
-    
-    // Iterar sobre cada identificador (L-EJU-004, etc.)
-    Object.keys(apiData).forEach(identifier => {
-      const depositData = apiData[identifier]
+    // TODO: Implementar llamada a la API antigua de NAFA cuando esté disponible
+    // Por ahora devolver array vacío
+    return []
+  },
+
+  /**
+   * Obtiene los estados disponibles para depósitos
+   * @returns {Promise<Array>} Lista de estados disponibles
+   */
+  async getEstadosDisponibles() {
+    try {
+      const response = await apiClient.get('/deposits/states')
+      console.log('📋 [NAFA] Estados disponibles:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ [NAFA] Error al obtener estados:', error)
+      // Fallback a estados por defecto
+      return [
+        { value: 'PENDIENTE', label: 'PENDIENTE' },
+        { value: 'LISTO', label: 'LISTO' }
+      ]
+    }
+  },
+
+  /**
+   * Cambia el estado de un depósito
+   * @param {string} depositId - ID del depósito
+   * @param {string} nuevoEstado - Nuevo estado (PENDIENTE o LISTO)
+   * @returns {Promise<Object>} Respuesta del servidor
+   */
+  async cambiarEstadoDeposito(depositId, nuevoEstado) {
+    try {
+      console.log(`🔄 [NAFA] Cambiando estado de depósito ${depositId} a ${nuevoEstado}`)
       
-      // Verificar si tiene la estructura ArrayOfWSDepositsByDayDTO
-      if (depositData.ArrayOfWSDepositsByDayDTO && depositData.ArrayOfWSDepositsByDayDTO.WSDepositsByDayDTO) {
-        const deposits = depositData.ArrayOfWSDepositsByDayDTO.WSDepositsByDayDTO
-        
-        // Asegurar que deposits sea un array
-        const depositsArray = Array.isArray(deposits) ? deposits : [deposits]
-        
-        // Agrupar por userName para obtener repartos únicos
-        const repartosPorUsuario = {}
-        
-        depositsArray.forEach(deposit => {
-          // Extraer número de reparto del userName (ej: "RTO 414, 414" -> "414")
-          const userNameMatch = deposit.userName.match(/RTO\s+(\d+)/)
-          const numeroReparto = userNameMatch ? userNameMatch[1] : deposit.userName
+      const response = await apiClient.put(`/deposits/${depositId}/status`, {
+        status: nuevoEstado
+      })
+      
+      console.log('✅ [NAFA] Estado cambiado exitosamente:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ [NAFA] Error al cambiar estado:', error)
+      
+      if (error.response?.data?.detail) {
+        throw new Error(error.response.data.detail)
+      } else {
+        throw new Error(`Error al cambiar estado del depósito ${depositId}`)
+      }
+    }
+  },
+
+  /**
+   * Cambia el estado de todos los depósitos de un reparto
+   * @param {Object} reparto - Objeto del reparto con sus depósitos
+   * @param {string} nuevoEstado - Nuevo estado para todos los depósitos
+   * @returns {Promise<Array>} Array con los resultados de cada cambio
+   */
+  async cambiarEstadoReparto(reparto, nuevoEstado) {
+    try {
+      console.log(`🔄 [NAFA] Cambiando estado de todos los depósitos del reparto ${reparto.idReparto} a ${nuevoEstado}`)
+      console.log('🔍 [NAFA] Depósitos en el reparto:', reparto.deposits)
+      
+      const cambios = []
+      
+      for (const deposit of reparto.deposits) {
+        try {
+          // Intentar diferentes campos que podrían contener el ID
+          let depositId = deposit.deposit_id || deposit.id || deposit.identifier || deposit.deposit_identifier
           
-          const repartoKey = `RTO ${numeroReparto}` // Cambiar formato a "RTO 418"
+          console.log('🔍 [NAFA] Procesando depósito:', {
+            depositKeys: Object.keys(deposit),
+            deposit_id: deposit.deposit_id,
+            id: deposit.id,
+            identifier: deposit.identifier,
+            depositId: depositId
+          })
           
-          if (!repartosPorUsuario[repartoKey]) {
-            repartosPorUsuario[repartoKey] = {
-              idReparto: repartoKey,
-              numeroReparto: numeroReparto,
-              fechaReparto: fecha,
-              userName: deposit.userName,
-              totalDeposits: 0,
-              depositCount: 0,
-              deposits: []
-            }
+          if (!depositId) {
+            console.error('❌ [NAFA] No se encontró ID válido para el depósito:', deposit)
+            cambios.push({ 
+              depositId: 'unknown', 
+              success: false, 
+              error: 'No se encontró ID válido para el depósito' 
+            })
+            continue
           }
           
-          // Sumar el monto del depósito
-          const amount = deposit.currencies?.WSDepositCurrency?.totalAmount 
-            ? parseFloat(deposit.currencies.WSDepositCurrency.totalAmount) 
-            : 0
-          
-          repartosPorUsuario[repartoKey].totalDeposits += amount
-          repartosPorUsuario[repartoKey].depositCount++
-          repartosPorUsuario[repartoKey].deposits.push({
-            amount: amount,
-            dateTime: deposit.dateTime,
-            depositId: deposit.depositId
+          const resultado = await this.cambiarEstadoDeposito(depositId, nuevoEstado)
+          cambios.push({ depositId: depositId, success: true, data: resultado })
+        } catch (error) {
+          cambios.push({ 
+            depositId: deposit.deposit_id || deposit.id || 'unknown', 
+            success: false, 
+            error: error.message 
           })
-        })
-        
-        // Convertir a formato final
-        Object.values(repartosPorUsuario).forEach(reparto => {
-          const montoEsperado = montosEsperados[reparto.idReparto] || 0
-          const diferencia = reparto.totalDeposits - montoEsperado
-          
-          repartos.push({
-            id: reparto.idReparto,
-            idReparto: reparto.idReparto,
-            fechaReparto: reparto.fechaReparto,
-            depositoEsperado: montoEsperado,
-            depositoReal: reparto.totalDeposits,
-            diferencia: diferencia,
-            estado: 'COMPLETADO', // Siempre completado ya que tenemos datos reales
-            movimientoFinanciero: null, // Sin movimientos por ahora
-            detalles: {
-              userName: reparto.userName,
-              cantidadDepositos: reparto.depositCount,
-              deposits: reparto.deposits
-            }
-          })
-        })
+        }
       }
-    })
-    
-    console.log('✅ Transformación completada. Repartos NAFA:', repartos.length)
-    
-    return repartos
-  },
-
-  /**
-   * Obtiene los montos esperados por reparto para NAFA
-   * @param {string} fecha - Fecha de consulta
-   * @returns {Object} Montos esperados por reparto (siempre 0)
-   */
-  async getMontoEsperadoPorReparto(fecha) {
-    // Para NAFA, por ahora todos los montos esperados son 0
-    return {}
-  },
-
-  /**
-   * Obtiene un reparto específico de NAFA
-   * @param {string} idReparto 
-   * @returns {Promise} 
-   */
-  async getRepartoById(idReparto) {
-    try {
-      const response = await apiClient.get(`/repartos/nafa/${idReparto}`)
-      return response.data
+      
+      const exitosos = cambios.filter(c => c.success).length
+      console.log(`✅ [NAFA] Estados cambiados: ${exitosos}/${cambios.length} depósitos`)
+      console.log('📊 [NAFA] Detalles de cambios:', cambios)
+      
+      return cambios
     } catch (error) {
-      console.error(`Error al obtener reparto ${idReparto} de NAFA:`, error)
-      throw error
-    }
-  },
-
-  /**
-   * Actualiza un reparto de NAFA
-   * @param {string} idReparto 
-   * @param {Object} repartoData 
-   * @returns {Promise} 
-   */
-  async updateReparto(idReparto, repartoData) {
-    try {
-      const response = await apiClient.put(`/repartos/nafa/${idReparto}`, repartoData)
-      return response.data
-    } catch (error) {
-      console.error(`Error al actualizar reparto ${idReparto} de NAFA:`, error)
-      throw error
-    }
-  },
-
-  /**
-   * Crea un nuevo reparto de NAFA
-   * @param {Object} repartoData - Datos del nuevo reparto
-   * @returns {Promise} Promesa con el reparto creado
-   */
-  async createReparto(repartoData) {
-    try {
-      const response = await apiClient.post('/repartos/nafa', repartoData)
-      return response.data
-    } catch (error) {
-      console.error('Error al crear reparto de NAFA:', error)
-      throw error
-    }
-  },
-
-  /**
-   * Elimina un reparto de NAFA
-   * @param {string} idReparto - ID del reparto a eliminar
-   * @returns {Promise} Promesa con la confirmación de eliminación
-   */
-  async deleteReparto(idReparto) {
-    try {
-      const response = await apiClient.delete(`/repartos/nafa/${idReparto}`)
-      return response.data
-    } catch (error) {
-      console.error(`Error al eliminar reparto ${idReparto} de NAFA:`, error)
-      throw error
-    }
-  },
-
-  /**
-   * Obtiene repartos de NAFA filtrados por fecha
-   * @param {string} fecha 
-   * @returns {Promise} 
-   */
-  async getRepartosByFecha(fecha) {
-    try {
-      const response = await apiClient.get(`/repartos/nafa?fecha=${fecha}`)
-      return response.data
-    } catch (error) {
-      console.error(`Error al obtener repartos de NAFA por fecha ${fecha}:`, error)
-      throw error
-    }
-  },
-
-  /**
-   * Crea un movimiento financiero para un reparto de NAFA
-   * @param {string} idReparto - ID del reparto
-   * @param {Object} movimientoData - Datos del movimiento financiero
-   * @returns {Promise} Promesa con el movimiento creado
-   */
-  async createMovimientoFinanciero(idReparto, movimientoData) {
-    try {
-      const response = await apiClient.post(`/repartos/nafa/${idReparto}/movimiento`, movimientoData)
-      return response.data
-    } catch (error) {
-      console.error(`Error al crear movimiento para reparto ${idReparto} de NAFA:`, error)
-      throw error
-    }
-  },
-
-  /**
-   * Actualiza un movimiento financiero de un reparto de NAFA
-   * @param {string} idReparto - ID del reparto
-   * @param {Object} movimientoData - Datos del movimiento financiero
-   * @returns {Promise} Promesa con el movimiento actualizado
-   */
-  async updateMovimientoFinanciero(idReparto, movimientoData) {
-    try {
-      const response = await apiClient.put(`/repartos/nafa/${idReparto}/movimiento`, movimientoData)
-      return response.data
-    } catch (error) {
-      console.error(`Error al actualizar movimiento para reparto ${idReparto} de NAFA:`, error)
-      throw error
-    }
-  },
-
-  /**
-   * Elimina un movimiento financiero de un reparto de NAFA
-   * @param {string} idReparto - ID del reparto
-   * @returns {Promise} Promesa con la confirmación de eliminación
-   */
-  async deleteMovimientoFinanciero(idReparto) {
-    try {
-      const response = await apiClient.delete(`/repartos/nafa/${idReparto}/movimiento`)
-      return response.data
-    } catch (error) {
-      console.error(`Error al eliminar movimiento para reparto ${idReparto} de NAFA:`, error)
+      console.error('❌ [NAFA] Error al cambiar estado del reparto:', error)
       throw error
     }
   },
@@ -399,5 +463,40 @@ export default {
       console.error('[NAFA] Error al eliminar movimiento:', error)
       throw error
     }
+  },
+
+  /**
+   * Crea un movimiento financiero
+   * @param {string} idReparto - ID del reparto
+   * @param {Object} movimientoData - Datos del movimiento financiero
+   * @returns {Promise} Promesa con el movimiento creado
+   */
+  async createMovimientoFinanciero(idReparto, movimientoData) {
+    try {
+      console.log(`📤 [NAFA] Creando movimiento financiero:`, movimientoData)
+      
+      // Usar el endpoint correcto que espera tu backend
+      const response = await apiClient.post('/movimientos-financieros', movimientoData)
+      
+      console.log(`✅ [NAFA] Movimiento creado exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al crear movimiento financiero:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Actualiza un movimiento financiero
+   * NOTA: Por ahora el backend solo soporta POST (crear), no PUT (actualizar)
+   * @param {string} idReparto - ID del reparto
+   * @param {Object} movimientoData - Datos del movimiento financiero
+   * @returns {Promise} Promesa con el movimiento actualizado
+   */
+  async updateMovimientoFinanciero(idReparto, movimientoData) {
+    console.log(`⚠️ [NAFA] ADVERTENCIA: Backend no soporta PUT, redirigiendo a CREATE`)
+    
+    // Por ahora, redirigir a CREATE ya que el backend no soporta PUT
+    return this.createMovimientoFinanciero(idReparto, movimientoData)
   }
 }

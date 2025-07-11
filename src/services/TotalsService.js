@@ -2,7 +2,7 @@ import axios from 'axios'
 import MockTotalsService from './MockTotalsService.js'
 
 // Configuración base de Axios - Usando proxy de Vite
-const API_BASE_URL = '/api'
+const API_BASE_URL = '/api-backend'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -101,14 +101,24 @@ export default {
     } catch (error) {
       console.error('❌ Error al obtener totales:', error)
       
-      // Verificar si el error es de timeout o conexión
+      // Verificar si el error es de timeout, conexión o error del servidor
       const isConnectionError = error.code === 'ECONNREFUSED' || 
                                error.code === 'ENOTFOUND' || 
                                error.message.includes('timeout') ||
                                error.message.includes('Network Error')
       
-      if (isConnectionError) {
-        console.log('🔄 Error de conexión - usando datos de demostración estables')
+      const isServerError = error.response && (
+                               error.response.status >= 500 || 
+                               error.response.status === 404 ||
+                               error.response.status === 403
+                             )
+      
+      if (isConnectionError || isServerError) {
+        if (isServerError) {
+          console.log(`🔄 Error del servidor (${error.response.status}) - usando datos de demostración`)
+        } else {
+          console.log('🔄 Error de conexión - usando datos de demostración estables')
+        }
         
         // Usar el servicio de simulación para datos más realistas
         try {
@@ -127,8 +137,20 @@ export default {
           }
         }
       } else {
-        // Para otros tipos de error, relanzar
-        throw error
+        // Para otros tipos de error, también usar fallback
+        console.log('🔄 Error desconocido - usando datos de demostración como fallback')
+        try {
+          return await MockTotalsService.getTotales(date)
+        } catch (mockError) {
+          const fechaConsulta = date || new Date().toISOString().split('T')[0]
+          return {
+            fecha: fechaConsulta,
+            jumillano: 1500000000,
+            laplata: 1200000000,
+            nafa: 2000000000,
+            totalGeneral: 4700000000
+          }
+        }
       }
     }
   },

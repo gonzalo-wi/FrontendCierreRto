@@ -158,76 +158,84 @@
       </div>
     </div>
 
-    <!-- Tabla responsive mejorada -->
-    <div class="overflow-x-auto">
-      <table class="min-w-full">
-        <thead class="bg-gradient-to-r from-gray-50 to-slate-50">
+    <!-- Tabla responsive mejorada con scroll horizontal suave -->
+    <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <table class="min-w-full table-auto">
+        <thead class="bg-gradient-to-r from-gray-50 to-slate-50 sticky top-0 z-10">
           <tr>
-            <th class="table-header group">
-              <div class="flex items-center space-x-2">
-                <img src="@/assets/entrega.png" alt="ID Reparto" class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity">
-                <span>ID Reparto</span>
+            <th class="table-header-compact group">
+              <div class="flex items-center space-x-1">
+                <img src="@/assets/entrega.png" alt="ID Reparto" class="w-3 h-3 opacity-70 group-hover:opacity-100 transition-opacity">
+                <span class="text-xs">ID Reparto</span>
               </div>
             </th>
-            <th class="table-header group">
-              <div class="flex items-center space-x-2">
-                <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <th class="table-header-compact group">
+              <div class="flex items-center space-x-1">
+                <svg class="w-3 h-3 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
-                <span>Fecha</span>
+                <span class="text-xs">Fecha</span>
               </div>
             </th>
-            <th class="table-header group">
-              <div class="flex items-center space-x-2">
-                <svg class="w-4 h-4 text-gray-400 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <th class="table-header-compact group">
+              <div class="flex items-center space-x-1">
+                <svg class="w-3 h-3 text-gray-400 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
                 </svg>
-                <span>Depósito Esperado</span>
+                <span class="text-xs">Esperado</span>
               </div>
             </th>
-            <th class="table-header group">
-              <div class="flex items-center space-x-2">
-                <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z"></path>
+            <th class="table-header-compact group">
+              <div class="flex items-center space-x-1">
+                <svg class="w-3 h-3 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2 2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z"></path>
                 </svg>
-                <span>Depósito Real</span>
+                <span class="text-xs">Real</span>
               </div>
             </th>
-            <th class="table-header group">
-              <div class="flex items-center space-x-2">
-                <svg class="w-4 h-4 text-gray-400 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <th class="table-header-compact group">
+              <div class="flex items-center space-x-1">
+                <svg class="w-3 h-3 text-gray-400 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
                 </svg>
-                <span>Diferencia</span>
+                <span class="text-xs">Diferencia</span>
               </div>
             </th>
-            <th class="table-header group">
-              <div class="flex items-center space-x-2">
-                <svg class="w-4 h-4 text-gray-400 group-hover:text-purple-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <th class="table-header-compact group">
+              <div class="flex items-center space-x-1">
+                <svg class="w-3 h-3 text-gray-400 group-hover:text-purple-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-                <span>Estado</span>
+                <span class="text-xs">Estado</span>
               </div>
             </th>
-            <th class="table-header group">
-              <div class="flex items-center space-x-2">
-                <svg class="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <th class="table-header-compact group">
+              <div class="flex items-center space-x-1">
+                <svg class="w-3 h-3 text-gray-400 group-hover:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                 </svg>
-                <span>Movimiento</span>
+                <span class="text-xs">Movimiento</span>
               </div>
             </th>
-            <th class="table-header group">
-              <div class="flex items-center space-x-2">
-                <svg class="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <th class="table-header-compact group">
+              <div class="flex items-center space-x-1">
+                <svg class="w-3 h-3 text-gray-400 group-hover:text-purple-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <span class="text-xs">Docs</span>
+              </div>
+            </th>
+            <th class="table-header-compact group">
+              <div class="flex items-center space-x-1">
+                <svg class="w-3 h-3 text-gray-400 group-hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
                 </svg>
-                <span>Acciones</span>
+                <span class="text-xs">Acciones</span>
               </div>
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-100">
+        <tbody class="bg-white divide-y divide-gray-50">
           <RepartoRow 
             v-for="(reparto, index) in paginatedRepartos" 
             :key="reparto.idReparto" 
@@ -236,6 +244,8 @@
             :style="{ animationDelay: `${index * 50}ms` }"
             @edit="$emit('edit', $event)"
             @delete-movement="$emit('delete-movement', $event)"
+            @toggle-comprobantes="handleToggleComprobantes"
+            @estado-actualizado="handleEstadoActualizado"
           />
         </tbody>
       </table>
@@ -376,7 +386,21 @@ const props = defineProps({
   }
 })
 
-defineEmits(['refresh', 'edit', 'delete-movement'])
+const emit = defineEmits(['refresh', 'edit', 'delete-movement', 'toggle-comprobantes', 'estado-actualizado'])
+
+// Función para manejar toggle de comprobantes
+const handleToggleComprobantes = (event) => {
+  console.log('🟢 RepartoTable - Evento recibido:', event)
+  emit('toggle-comprobantes', event)
+  console.log('🟢 RepartoTable - Evento enviado a padre')
+}
+
+// Función para manejar actualización de estado
+const handleEstadoActualizado = (event) => {
+  console.log('🔄 RepartoTable - Estado actualizado:', event)
+  emit('estado-actualizado', event)
+  console.log('🔄 RepartoTable - Evento de estado enviado a padre')
+}
 
 // Estados para filtros
 const searchRTO = ref('')
@@ -524,6 +548,68 @@ watch(totalPages, (newTotal) => {
 
 .table-header:hover::after {
   width: 100%;
+}
+
+/* Header de tabla compacto para mejor densidad */
+.table-header-compact {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  position: relative;
+  white-space: nowrap;
+}
+
+.table-header-compact:hover {
+  background-color: #f3f4f6;
+  border-bottom-color: #3b82f6;
+}
+
+.table-header-compact::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(to right, #3b82f6, #8b5cf6);
+  transition: width 0.3s ease;
+}
+
+.table-header-compact:hover::after {
+  width: 100%;
+}
+
+/* Scrollbar personalizada para mejor UX */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(209, 213, 219) rgb(243, 244, 246);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgb(243, 244, 246);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgb(209, 213, 219);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgb(156, 163, 175);
 }
 
 /* Animación para las filas */

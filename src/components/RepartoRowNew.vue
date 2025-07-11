@@ -1,92 +1,145 @@
 <template>
   <tr 
     :class="getRowClass(reparto.estado || 'PENDIENTE')"
-    class="group transition-all duration-300 ease-out hover:bg-gradient-to-r hover:from-blue-50/30 hover:via-transparent hover:to-purple-50/30 hover:shadow-lg relative border-b border-gray-100 hover:border-transparent"
+    class="group transition-all duration-500 ease-out hover:bg-gradient-to-r hover:from-blue-50/50 hover:via-transparent hover:to-purple-50/50 hover:shadow-xl hover:shadow-blue-500/10 relative border-b border-gray-100 hover:border-transparent"
   >
     
-    <!-- Reparto ID - Más compacto -->
-    <td class="px-2 py-1.5 whitespace-nowrap">
-      <div class="flex items-center space-x-2">
-        <div class="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md flex items-center justify-center shadow-sm">
-          <span class="text-white text-xs font-bold">{{ reparto.numeroReparto }}</span>
+    <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
+      <div class="flex items-center space-x-3">
+        <div class="relative">
+          <div class="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+            <img 
+              src="@/assets/entrega.png" 
+              alt="Entrega" 
+              class="w-5 h-5 object-contain filter brightness-0 invert"
+            >
+          </div>
+          
+          <div class="absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-sm" 
+               :class="getStatusIndicatorClass(reparto.estado || 'PENDIENTE')">
+          </div>
         </div>
         <div class="min-w-0 flex-1">
-          <div class="text-xs font-semibold text-gray-900">{{ reparto.idReparto }}</div>
+          <div class="text-sm font-bold text-gray-900 group-hover:text-blue-900 transition-colors">
+            #{{ reparto.idReparto }}
+          </div>
+          <div class="text-xs text-gray-500 font-medium">
+            ID: {{ reparto.idReparto.toString().padStart(6, '0') }}
+          </div>
         </div>
       </div>
     </td>
 
-    <!-- Fecha - Más compacto -->
-    <td class="px-2 py-1.5 whitespace-nowrap">
-      <div class="text-xs text-gray-900">{{ formatDate(reparto.fechaReparto) }}</div>
-      <div class="text-xs text-gray-500">{{ getRelativeDate(reparto.fechaReparto) }}</div>
-    </td>
-
-    <!-- Depósito Esperado - Compacto -->
-    <td class="px-2 py-1.5 whitespace-nowrap text-right">
-      <div class="text-xs font-semibold text-gray-900 font-mono">
-        {{ formatCurrency(reparto.depositoEsperado) }}
+    
+    <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
+      <div class="flex items-center space-x-3">
+        <div class="flex-shrink-0 p-2 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg group-hover:from-emerald-200 group-hover:to-teal-200 transition-all duration-300">
+          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="text-sm font-semibold text-gray-900">{{ formatDate(reparto.fechaReparto) }}</div>
+          <div class="text-xs text-gray-500 font-medium">{{ getRelativeDate(reparto.fechaReparto) }}</div>
+        </div>
       </div>
-      <div class="text-xs text-gray-500">Esperado</div>
     </td>
 
-    <!-- Depósito Real - Compacto -->
-    <td class="px-2 py-1.5 whitespace-nowrap text-right">
-      <div class="text-xs font-semibold text-blue-900 font-mono">
-        {{ formatCurrency(reparto.depositoReal) }}
+    <!-- Depósito Esperado con estilo premium -->
+    <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
+      <div class="relative bg-gradient-to-r from-slate-50 to-gray-50 rounded-lg p-3 border border-gray-200 group-hover:border-blue-200 transition-all duration-300">
+        <div class="text-sm font-semibold text-gray-900 font-mono">
+          {{ formatCurrency(reparto.depositoEsperado) }}
+        </div>
+        <div class="text-xs text-gray-500 font-medium">
+          Esperado
+        </div>
+        
+        <!-- Indicador visual en la esquina -->
+        <div class="absolute top-1 right-1 w-2 h-2 rounded-full bg-gray-400"></div>
       </div>
-      <div class="text-xs text-blue-600">Real</div>
     </td>
 
-    <!-- Diferencia - Compacto -->
-    <td class="px-2 py-1.5 whitespace-nowrap text-right">
-      <div class="flex items-center justify-end space-x-1">
-        <svg class="w-3 h-3 flex-shrink-0" 
-             :class="getDifferenceIconClass(reparto.estado || 'PENDIENTE')" 
-             fill="currentColor" viewBox="0 0 20 20">
-          <path v-if="reparto.diferencia === 0" fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-          <path v-else-if="reparto.diferencia > 0" fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
-          <path v-else fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"></path>
-        </svg>
-        <div class="text-xs font-bold font-mono" 
+    <!-- Depósito Real con indicador de estado -->
+    <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
+      <div class="relative bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200 group-hover:border-blue-300 transition-all duration-300">
+        <div class="text-sm font-semibold text-blue-900 font-mono">
+          {{ formatCurrency(reparto.depositoReal) }}
+        </div>
+        <div class="text-xs text-blue-600 font-medium">
+          Real
+        </div>
+        
+        <!-- Indicador de estado del monto real -->
+        <div class="absolute top-1 right-1 w-2 h-2 rounded-full" 
+             :class="getRealAmountIndicatorClass(reparto.estado || 'PENDIENTE')">
+        </div>
+      </div>
+    </td>
+
+    <!-- Diferencia con diseño destacado -->
+    <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-right">
+      <div class="relative rounded-lg p-3 border transition-all duration-300 group-hover:shadow-lg" 
+           :class="getDifferenceBgClass(reparto.estado || 'PENDIENTE')">
+        <div class="flex items-center justify-end space-x-2">
+          <!-- Icono de estado -->
+          <svg class="w-4 h-4 flex-shrink-0" 
+               :class="getDifferenceIconClass(reparto.estado || 'PENDIENTE')" 
+               fill="currentColor" viewBox="0 0 20 20">
+            <path v-if="reparto.diferencia === 0" fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            <path v-else-if="reparto.diferencia > 0" fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+            <path v-else fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"></path>
+          </svg>
+          
+          <!-- Monto de diferencia -->
+          <div class="text-sm font-bold font-mono" 
+               :class="getDifferenceIconClass(reparto.estado || 'PENDIENTE')">
+            {{ formatCurrency(Math.abs(reparto.diferencia || 0)) }}
+          </div>
+        </div>
+        
+        <!-- Etiqueta descriptiva -->
+        <div class="text-xs font-medium mt-1" 
              :class="getDifferenceIconClass(reparto.estado || 'PENDIENTE')">
-          {{ formatCurrency(Math.abs(reparto.diferencia || 0)) }}
+          {{ getDifferenceLabel(reparto.estado || 'PENDIENTE') }}
         </div>
-      </div>
-      <div class="text-xs font-medium" 
-           :class="getDifferenceIconClass(reparto.estado || 'PENDIENTE')">
-        {{ getDifferenceLabel(reparto.estado || 'PENDIENTE') }}
+        
+        <!-- Indicador de prioridad -->
+        <div class="absolute top-1 right-1 w-2 h-2 rounded-full" 
+             :class="getDifferenceIndicatorClass(reparto.estado || 'PENDIENTE')">
+        </div>
       </div>
     </td>
 
     <!-- Estado con badge premium y funcionalidad de edición -->
-    <td class="px-2 py-1.5 whitespace-nowrap">
+    <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
       <div class="flex justify-center">
         <EstadoSelector
           :estado="reparto.estado || 'PENDIENTE'"
-          :deposito-id="getDepositId(reparto)"
-          :planta="getPlantaName(reparto)"
-          :compact="true"
-          :debug="false"
-          @estado-changed="manejarCambioEstado"
+          :editable="true"
+          tipo-entidad="reparto"
+          :servicio="getServicioParaPlanta()"
+          :entity-data="reparto"
+          @estado-cambiado="manejarCambioEstado"
+          @error="manejarErrorEstado"
         />
       </div>
     </td>
 
     <!-- Movimiento Financiero con diseño mejorado -->
-    <td class="px-2 py-1.5 whitespace-nowrap">
-      <div class="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-2 border border-gray-200 group-hover:border-blue-200 transition-all duration-300">
+    <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
+      <div class="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-3 border border-gray-200 group-hover:border-blue-200 transition-all duration-300">
         <MovimientoFinanciero :movimiento="reparto.movimientoFinanciero" />
       </div>
     </td>
 
     <!-- Comprobantes -->
-    <td class="px-2 py-1.5 whitespace-nowrap">
+    <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
       <div class="flex items-center justify-center">
         <button 
           @click="toggleComprobantes"
           :disabled="loadingComprobantes"
-          class="relative inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+          class="relative inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
           :title="getComprobantesTooltip()"
         >
           <!-- Spinner de carga -->
@@ -115,34 +168,37 @@
     </td>
 
     <!-- Acciones con diseño premium -->
-    <td class="px-2 py-1.5 whitespace-nowrap text-center">
+    <td class="px-4 lg:px-6 py-4 whitespace-nowrap text-center">
       <!-- Botones para cuando existe movimiento financiero -->
-      <div v-if="reparto.movimientoFinanciero" class="flex justify-center space-x-1">
+      <div v-if="reparto.movimientoFinanciero" class="flex justify-center space-x-2">
         <!-- Botón Editar Premium -->
         <button 
           @click="$emit('edit', reparto)"
-          class="group relative inline-flex items-center justify-center w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+          class="group relative inline-flex items-center justify-center w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
           title="Editar movimiento"
         >
           <svg class="w-4 h-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
           </svg>
+          <div class="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
         </button>
         
         <!-- Botón Eliminar Premium -->
         <button 
           @click="$emit('delete-movement', reparto)"
-          class="group relative inline-flex items-center justify-center w-7 h-7 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+          class="group relative inline-flex items-center justify-center w-9 h-9 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
           title="Eliminar movimiento"
         >
           <svg class="w-4 h-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
           </svg>
+          <div class="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
         </button>
       </div>
       
-      <!-- Botón para crear movimiento cuando no existe movimiento financiero -->
-      <div v-else class="flex justify-center">
+      <!-- Botones para crear movimiento cuando no existe -->
+      <div v-else-if="needsMovement(reparto)" class="flex justify-center space-x-2">
+        <!-- Botón Crear Genérico -->
         <button 
           @click="$emit('edit', reparto)"
           class="group relative inline-flex items-center px-3 py-2 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
@@ -152,7 +208,46 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
           <span class="font-semibold">Crear</span>
+          <div class="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
         </button>
+        
+        <!-- Botón Crear Cheque -->
+        <button 
+          @click="$emit('edit', { reparto: reparto, movimientoTipo: 'cheque' })"
+          class="group relative inline-flex items-center px-3 py-2 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          title="Crear cheque"
+        >
+          <svg class="w-4 h-4 mr-1 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <span class="font-semibold">Cheque</span>
+          <div class="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+        </button>
+        
+        <!-- Botón Crear Retención -->
+        <button 
+          @click="$emit('edit', { reparto: reparto, movimientoTipo: 'retencion' })"
+          class="group relative inline-flex items-center px-3 py-2 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-sm font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          title="Crear retención"
+        >
+          <svg class="w-4 h-4 mr-1 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4m16 0l-4 4m4-4l-4-4"></path>
+          </svg>
+          <span class="font-semibold">Retención</span>
+          <div class="absolute inset-0 rounded-xl bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+        </button>
+      </div>
+      
+      <!-- Indicador de reparto listo para cerrar -->
+      <div v-else class="flex justify-center">
+        <div class="inline-flex items-center px-4 py-2 bg-gradient-to-br from-green-100 to-emerald-100 border border-green-200 rounded-xl shadow-sm">
+          <div class="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mr-2 shadow-md">
+            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            </svg>
+          </div>
+          <span class="text-green-700 font-semibold text-sm">Completado</span>
+        </div>
       </div>
     </td>
   </tr>
@@ -199,8 +294,8 @@ const comprobantesCount = ref(0)
 const comprobantesVerificados = ref(false)
 const mostrandoComprobantes = ref(false)
 
-// Computed para obtener el servicio apropiado según la planta
-const servicioPlanta = computed(() => {
+// Función para obtener el servicio apropiado según la planta
+const getServicioParaPlanta = () => {
   // Determinar la planta basándose en el ID del reparto
   const repartoId = props.reparto.id || ''
   
@@ -214,72 +309,26 @@ const servicioPlanta = computed(() => {
   
   // Fallback por defecto (puede ajustarse según la lógica de negocio)
   return RtoNafaService
-})
+}
 
 // Función para manejar el cambio de estado
 const manejarCambioEstado = (evento) => {
   console.log('✅ Estado cambiado exitosamente:', evento)
   
-  if (evento.success) {
-    // Emitir evento hacia el componente padre para actualizar la lista
-    emit('estado-actualizado', {
-      repartoId: props.reparto.id,
-      reparto: props.reparto,
-      estadoAnterior: evento.estadoAnterior,
-      estadoNuevo: evento.estadoNuevo,
-      resultado: evento
-    })
-  } else {
-    console.error('❌ Error al cambiar estado:', evento.error)
-  }
+  // Emitir evento hacia el componente padre para actualizar la lista
+  emit('estado-actualizado', {
+    repartoId: props.reparto.id,
+    reparto: props.reparto,
+    estadoAnterior: evento.estadoAnterior,
+    estadoNuevo: evento.estadoNuevo,
+    resultado: evento.resultado
+  })
 }
 
-// Función para obtener el ID del depósito desde el reparto
-const getDepositId = (reparto) => {
-  // CASO 1: El objeto ES directamente un depósito (estructura real de la API)
-  if (reparto.deposit_id) {
-    console.log(`✅ [RepartoRow] Usando deposit_id: ${reparto.deposit_id}`)
-    return reparto.deposit_id
-  }
-  
-  // CASO 2: Estructura anidada - usar deposits[0].deposit_id si existe
-  if (reparto.deposits && reparto.deposits.length > 0 && reparto.deposits[0].deposit_id) {
-    console.log(`✅ [RepartoRow] Usando deposits[0].deposit_id: ${reparto.deposits[0].deposit_id}`)
-    return reparto.deposits[0].deposit_id
-  }
-  
-  // CASO 3: Fallback - usar deposits[0].id si existe
-  if (reparto.deposits && reparto.deposits.length > 0 && reparto.deposits[0].id) {
-    console.log(`⚠️ [RepartoRow] Fallback deposits[0].id: ${reparto.deposits[0].id}`)
-    return reparto.deposits[0].id
-  }
-  
-  // CASO 4: Fallback final - usar el ID del reparto
-  console.warn(`❌ [RepartoRow] Fallback reparto.id: ${reparto.id} - Puede fallar`)
-  return reparto.id
-}
-
-// Función para obtener el nombre de la planta
-const getPlantaName = (reparto) => {
-  // Detectar planta por el ID del reparto
-  const repartoId = reparto.id || reparto.idReparto || ''
-  
-  if (repartoId.includes('nafa') || reparto.planta === 'nafa') {
-    return 'nafa'
-  } else if (repartoId.includes('jumillano') || repartoId.includes('jumi') || reparto.planta === 'jumillano') {
-    return 'jumi'
-  } else if (repartoId.includes('plata') || reparto.planta === 'laplata') {
-    return 'laplata'
-  }
-  
-  // Fallback por defecto
-  console.warn('[RepartoRow] No se pudo detectar la planta, usando jumi como fallback')
-  return 'jumi'
-}
-
-// Función para manejar errores en el cambio de estado (para retrocompatibilidad)
+// Función para manejar errores en el cambio de estado
 const manejarErrorEstado = (error) => {
-  console.error('❌ Error al cambiar estado (retrocompatibilidad):', error)
+  console.error('❌ Error al cambiar estado:', error)
+  // Aquí podrías mostrar un toast/notification
 }
 
 // Función para toggle de comprobantes
@@ -432,57 +481,15 @@ const getDifferenceLabel = (estado) => {
 
 // Fecha relativa
 const getRelativeDate = (date) => {
-  try {
-    // Obtener fechas sin componente de tiempo para comparación exacta
-    const today = new Date()
-    const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-    
-    // Manejar diferentes formatos de fecha
-    let targetDate
-    if (typeof date === 'string') {
-      // Si es string, puede ser YYYY-MM-DD o DD/MM/YYYY
-      if (date.includes('/')) {
-        // Formato DD/MM/YYYY
-        const [day, month, year] = date.split('/')
-        targetDate = new Date(year, month - 1, day)
-      } else if (date.includes('-')) {
-        // Formato YYYY-MM-DD
-        targetDate = new Date(date + 'T00:00:00')
-      } else {
-        targetDate = new Date(date)
-      }
-    } else {
-      targetDate = new Date(date)
-    }
-    
-    const targetDateOnly = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate())
-    
-    const diffTime = todayDateOnly - targetDateOnly
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    
-    console.log('📅 [FECHA_RELATIVA] Debug comparación de fechas:', {
-      fechaOriginal: date,
-      tipoFecha: typeof date,
-      fechaHoy: today.toDateString(),
-      fechaTarget: targetDate.toDateString(),
-      fechaHoySoloFecha: todayDateOnly.toDateString(),
-      fechaTargetSoloFecha: targetDateOnly.toDateString(),
-      diffDays: diffDays,
-      resultado: diffDays === 0 ? 'Hoy' : diffDays === 1 ? 'Ayer' : `${diffDays} días`
-    })
-    
-    if (diffDays === 0) return 'Hoy'
-    if (diffDays === 1) return 'Ayer'
-    if (diffDays === -1) return 'Mañana'
-    if (diffDays > 1 && diffDays < 7) return `Hace ${diffDays} días`
-    if (diffDays < -1 && diffDays > -7) return `En ${Math.abs(diffDays)} días`
-    if (diffDays >= 7) return 'Hace más de una semana'
-    if (diffDays <= -7) return 'En más de una semana'
-    return 'Fecha inválida'
-  } catch (error) {
-    console.error('❌ [FECHA_RELATIVA] Error procesando fecha:', { date, error: error.message })
-    return 'Fecha inválida'
-  }
+  const today = new Date()
+  const targetDate = new Date(date)
+  const diffTime = today - targetDate
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  
+  if (diffDays === 0) return 'Hoy'
+  if (diffDays === 1) return 'Ayer'
+  if (diffDays < 7) return `Hace ${diffDays} días`
+  return 'Hace más de una semana'
 }
 
 // Tooltip dinámico para comprobantes
