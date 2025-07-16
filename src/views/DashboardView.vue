@@ -84,6 +84,11 @@
         />
       </div>
 
+      <!-- Gráfico de Evolución Diaria -->
+      <div class="mb-10">
+        <DailyTotalsChart :fecha-seleccionada="fechaSeleccionada?.fechaAPI" />
+      </div>
+
       <!-- Grid de Plantas - Diseño Ejecutivo Mejorado -->
       <div class="mb-10">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
@@ -140,23 +145,23 @@
                 </div>
               </div>
 
-              <!-- Métricas mejoradas -->
+              <!-- Métricas con datos reales -->
               <div class="space-y-4 mb-6">
                 <div class="flex justify-between items-center p-3 bg-blue-50 rounded-xl border border-blue-100">
-                  <span class="text-sm font-medium text-blue-700">Estado operativo</span>
-                  <span class="font-bold text-blue-800">Óptimo</span>
+                  <span class="text-sm font-medium text-blue-700">Estado del cierre</span>
+                  <span class="font-bold text-blue-800">{{ getPlantMetrics.ciudadela.estado }}</span>
                 </div>
                 <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                  <span class="text-sm font-medium text-gray-600">Última sincronización</span>
-                  <span class="font-medium text-gray-900 text-sm">{{ lastSync }}</span>
+                  <span class="text-sm font-medium text-gray-600">Repartos procesados</span>
+                  <span class="font-medium text-gray-900 text-sm">{{ getPlantMetrics.ciudadela.repartos }}</span>
                 </div>
                 <div class="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                  <span class="text-sm font-medium text-blue-700">Rendimiento</span>
+                  <span class="text-sm font-medium text-blue-700">Progreso completado</span>
                   <div class="flex items-center space-x-1">
                     <div class="w-16 bg-blue-200 rounded-full h-2">
-                      <div class="bg-blue-600 h-2 rounded-full" style="width: 92%"></div>
+                      <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" :style="`width: ${getPlantMetrics.ciudadela.progreso}%`"></div>
                     </div>
-                    <span class="font-bold text-blue-800 text-sm">92%</span>
+                    <span class="font-bold text-blue-800 text-sm">{{ getPlantMetrics.ciudadela.progreso }}%</span>
                   </div>
                 </div>
               </div>
@@ -210,20 +215,20 @@
 
               <div class="space-y-4 mb-6">
                 <div class="flex justify-between items-center p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                  <span class="text-sm font-medium text-emerald-700">Estado operativo</span>
-                  <span class="font-bold text-emerald-800">Óptimo</span>
+                  <span class="text-sm font-medium text-emerald-700">Estado del cierre</span>
+                  <span class="font-bold text-emerald-800">{{ getPlantMetrics.laplata.estado }}</span>
                 </div>
                 <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                  <span class="text-sm font-medium text-gray-600">Última sincronización</span>
-                  <span class="font-medium text-gray-900 text-sm">{{ lastSync }}</span>
+                  <span class="text-sm font-medium text-gray-600">Repartos procesados</span>
+                  <span class="font-medium text-gray-900 text-sm">{{ getPlantMetrics.laplata.repartos }}</span>
                 </div>
                 <div class="flex justify-between items-center p-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
-                  <span class="text-sm font-medium text-emerald-700">Rendimiento</span>
+                  <span class="text-sm font-medium text-emerald-700">Progreso completado</span>
                   <div class="flex items-center space-x-1">
                     <div class="w-16 bg-emerald-200 rounded-full h-2">
-                      <div class="bg-emerald-600 h-2 rounded-full" style="width: 96%"></div>
+                      <div class="bg-emerald-600 h-2 rounded-full transition-all duration-300" :style="`width: ${getPlantMetrics.laplata.progreso}%`"></div>
                     </div>
-                    <span class="font-bold text-emerald-800 text-sm">96%</span>
+                    <span class="font-bold text-emerald-800 text-sm">{{ getPlantMetrics.laplata.progreso }}%</span>
                   </div>
                 </div>
               </div>
@@ -276,20 +281,20 @@
 
               <div class="space-y-4 mb-6">
                 <div class="flex justify-between items-center p-3 bg-purple-50 rounded-xl border border-purple-100">
-                  <span class="text-sm font-medium text-purple-700">Estado operativo</span>
-                  <span class="font-bold text-purple-800">Óptimo</span>
+                  <span class="text-sm font-medium text-purple-700">Estado del cierre</span>
+                  <span class="font-bold text-purple-800">{{ getPlantMetrics.nafa.estado }}</span>
                 </div>
                 <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                  <span class="text-sm font-medium text-gray-600">Última sincronización</span>
-                  <span class="font-medium text-gray-900 text-sm">{{ lastSync }}</span>
+                  <span class="text-sm font-medium text-gray-600">Repartos procesados</span>
+                  <span class="font-medium text-gray-900 text-sm">{{ getPlantMetrics.nafa.repartos }}</span>
                 </div>
                 <div class="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-100">
-                  <span class="text-sm font-medium text-purple-700">Rendimiento</span>
+                  <span class="text-sm font-medium text-purple-700">Progreso completado</span>
                   <div class="flex items-center space-x-1">
                     <div class="w-16 bg-purple-200 rounded-full h-2">
-                      <div class="bg-purple-600 h-2 rounded-full" style="width: 88%"></div>
+                      <div class="bg-purple-600 h-2 rounded-full transition-all duration-300" :style="`width: ${getPlantMetrics.nafa.progreso}%`"></div>
                     </div>
-                    <span class="font-bold text-purple-800 text-sm">88%</span>
+                    <span class="font-bold text-purple-800 text-sm">{{ getPlantMetrics.nafa.progreso }}%</span>
                   </div>
                 </div>
               </div>
@@ -330,6 +335,7 @@ import DateSelector from '../components/DateSelector.vue'
 import NotificationCenter from '../components/NotificationCenter.vue'
 import ConnectionStatus from '../components/ConnectionStatus.vue'
 import PlantComparison from '../components/PlantComparison.vue'
+import DailyTotalsChart from '../components/DailyTotalsChart.vue'
 
 // Estado reactivo
 const fechaSeleccionada = ref(null)
@@ -409,6 +415,44 @@ const onTotalesCargados = (totales) => {
   console.log('📊 Totales recibidos en Dashboard:', totales)
   totalesData.value = totales
 }
+
+// Computed properties para métricas dinámicas
+const getPlantMetrics = computed(() => {
+  if (!totalesData.value) {
+    return {
+      ciudadela: { repartos: '0/0', progreso: 0, estado: 'Cargando...' },
+      laplata: { repartos: '0/0', progreso: 0, estado: 'Cargando...' },
+      nafa: { repartos: '0/0', progreso: 0, estado: 'Cargando...' }
+    }
+  }
+
+  const calcularMetricas = (plantData) => {
+    if (!plantData) return { repartos: '0/0', progreso: 0, estado: 'Sin datos' }
+    
+    const total = plantData.totalRepartos || 0
+    const procesados = plantData.repartosListos || 0
+    const progreso = total > 0 ? Math.round((procesados / total) * 100) : 0
+    
+    let estado = 'Pendiente'
+    if (progreso === 100) estado = 'Completado'
+    else if (progreso >= 80) estado = 'Avanzado' 
+    else if (progreso >= 50) estado = 'En progreso'
+    else if (progreso > 0) estado = 'Iniciado'
+    
+    return {
+      repartos: `${procesados}/${total}`,
+      progreso,
+      estado,
+      montoTotal: plantData.totalDepositado || 0
+    }
+  }
+
+  return {
+    ciudadela: calcularMetricas(totalesData.value.ciudadela),
+    laplata: calcularMetricas(totalesData.value.laplata),
+    nafa: calcularMetricas(totalesData.value.nafa)
+  }
+})
 </script>
 
 <style scoped>

@@ -32,7 +32,31 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-                <span>Listado de Repartos</span>
+                <span>{{ filteredRepartos.length }} repartos</span>
+              </div>
+              
+              <!-- Badge de faltantes -->
+              <div v-if="contadorFaltantes > 0" class="bg-gradient-to-r from-red-100 to-red-200 border border-red-300 px-3 py-1.5 rounded-lg text-sm font-medium text-red-700 flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                </svg>
+                <span>{{ contadorFaltantes }} faltantes</span>
+              </div>
+              
+              <!-- Badge de sobrantes -->
+              <div v-if="contadorSobrantes > 0" class="bg-gradient-to-r from-green-100 to-green-200 border border-green-300 px-3 py-1.5 rounded-lg text-sm font-medium text-green-700 flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                </svg>
+                <span>{{ contadorSobrantes }} sobrantes</span>
+              </div>
+              
+              <!-- Badge de exactos -->
+              <div v-if="contadorExactos > 0" class="bg-gradient-to-r from-blue-100 to-blue-200 border border-blue-300 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-700 flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>{{ contadorExactos }} exactos</span>
               </div>
             </div>
           </div>
@@ -92,6 +116,20 @@
               <option value="PENDIENTE">🔄 Pendientes</option>
             </select>
           </div>
+
+          <!-- Filtro por tipo de diferencia -->
+          <div class="relative group w-full sm:w-auto sm:min-w-[180px]">
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Tipo</label>
+            <select
+              v-model="tipoFilter"
+              class="w-full px-4 py-3.5 bg-white/70 backdrop-blur border border-slate-200 hover:border-purple-300 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 rounded-xl text-sm font-medium transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
+            >
+              <option value="">Todos los tipos</option>
+              <option value="FALTANTE">📉 Faltantes</option>
+              <option value="SOBRANTE">📈 Sobrantes</option>
+              <option value="EXACTO">🎯 Exactos</option>
+            </select>
+          </div>
         </div>
 
         <!-- Filtros rápidos y acciones -->
@@ -113,6 +151,8 @@
             </div>
             <span class="text-sm font-medium text-slate-700 group-hover:text-amber-700">Solo Diferencias</span>
           </label>
+
+
 
           <!-- Limpiar filtros -->
           <button
@@ -405,6 +445,7 @@ const handleEstadoActualizado = (event) => {
 // Estados para filtros
 const searchRTO = ref('')
 const estadoFilter = ref('')
+const tipoFilter = ref('')
 const soloDiferencias = ref(false)
 
 // Estados para paginación
@@ -429,12 +470,42 @@ const filteredRepartos = computed(() => {
     filtered = filtered.filter(reparto => reparto.estado === estadoFilter.value)
   }
 
+  // Filtro por tipo de diferencia
+  if (tipoFilter.value) {
+    filtered = filtered.filter(reparto => {
+      const diferencia = reparto.depositoReal - reparto.depositoEsperado
+      switch (tipoFilter.value) {
+        case 'FALTANTE':
+          return diferencia < 0
+        case 'SOBRANTE':
+          return diferencia > 0
+        case 'EXACTO':
+          return diferencia === 0
+        default:
+          return true
+      }
+    })
+  }
+
   // Filtro solo diferencias
   if (soloDiferencias.value) {
     filtered = filtered.filter(reparto => reparto.depositoReal !== reparto.depositoEsperado)
   }
 
   return filtered
+})
+
+// Contadores dinámicos para badges
+const contadorFaltantes = computed(() => {
+  return props.repartos.filter(reparto => reparto.depositoReal < reparto.depositoEsperado).length
+})
+
+const contadorSobrantes = computed(() => {
+  return props.repartos.filter(reparto => reparto.depositoReal > reparto.depositoEsperado).length
+})
+
+const contadorExactos = computed(() => {
+  return props.repartos.filter(reparto => reparto.depositoReal === reparto.depositoEsperado).length
 })
 
 // Paginación computada
@@ -480,13 +551,17 @@ const visiblePages = computed(() => {
 
 // Verificar si hay filtros activos
 const hasActiveFilters = computed(() => {
-  return searchRTO.value.trim() !== '' || estadoFilter.value !== '' || soloDiferencias.value
+  return searchRTO.value.trim() !== '' || 
+         estadoFilter.value !== '' || 
+         tipoFilter.value !== '' ||
+         soloDiferencias.value
 })
 
 // Funciones para manejar filtros
 const clearFilters = () => {
   searchRTO.value = ''
   estadoFilter.value = ''
+  tipoFilter.value = ''
   soloDiferencias.value = false
   currentPage.value = 1
 }
@@ -499,7 +574,7 @@ const goToPage = (page) => {
 }
 
 // Watchers para resetear página cuando cambian los filtros
-watch([searchRTO, estadoFilter, soloDiferencias, itemsPerPage], () => {
+watch([searchRTO, estadoFilter, tipoFilter, soloDiferencias, itemsPerPage], () => {
   currentPage.value = 1
 })
 
