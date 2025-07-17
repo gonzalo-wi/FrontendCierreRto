@@ -175,6 +175,7 @@ export default {
           depositoReal: 0,
           depositoEsperado: 0,
           diferencia: 0,
+          composicionEsperado: '', // Nuevo campo para la composición
           estado: 'PENDIENTE',
           movimientoFinanciero: null,
           deposits: []
@@ -190,6 +191,17 @@ export default {
       repartosPorNumero[repartoKey].depositoEsperado += esperado
       repartosPorNumero[repartoKey].diferencia += diferencia
       
+      // Agregar información de composición esperada
+      if (deposit.composicion_esperado) {
+        // Si ya existe composición, combinar sin duplicar
+        const composicionActual = repartosPorNumero[repartoKey].composicionEsperado || ''
+        const nuevaComposicion = deposit.composicion_esperado
+        
+        // Crear conjunto único de letras de composición
+        const letrasUnicas = new Set([...composicionActual, ...nuevaComposicion])
+        repartosPorNumero[repartoKey].composicionEsperado = Array.from(letrasUnicas).sort().join('')
+      }
+      
       // El estado del reparto será el último estado encontrado
       // O se podría implementar lógica más compleja para determinar el estado del grupo
       repartosPorNumero[repartoKey].estado = deposit.estado || 'PENDIENTE'
@@ -197,7 +209,8 @@ export default {
       // Agregar información adicional del backend
       const depositInfo = {
         ...deposit,
-        tieneDiferencia: deposit.tiene_diferencia || false
+        tieneDiferencia: deposit.tiene_diferencia || false,
+        composicionEsperado: deposit.composicion_esperado || ''
       }
       
       repartosPorNumero[repartoKey].deposits.push(depositInfo)
@@ -220,6 +233,9 @@ export default {
       } else {
         reparto.estado = 'PENDIENTE'
       }
+      
+      // Agregar descripción formateada de la composición
+      reparto.composicionEsperadoDescripcion = this._formatearComposicion(reparto.composicionEsperado)
       
       repartos.push(reparto)
     })
@@ -498,5 +514,35 @@ export default {
     
     // Por ahora, redirigir a CREATE ya que el backend no soporta PUT
     return this.createMovimientoFinanciero(idReparto, movimientoData)
+  },
+
+  /**
+   * Formatea la composición esperada mostrando solo las letras separadas por guiones
+   * @param {string} composicion - String con letras de composición (E, C, R)
+   * @returns {string} Letras separadas por guiones (ej: "E - C - R")
+   */
+  formatearComposicionEsperada(composicion) {
+    if (!composicion) return ''
+    
+    // Convertir a array de letras únicas y ordenarlas
+    const letras = [...new Set([...composicion])].sort()
+    
+    // Unir con guiones y espacios
+    return letras.join(' - ')
+  },
+
+  /**
+   * Función auxiliar para formatear composición - disponible dentro del contexto del objeto
+   * @param {string} composicion - String con letras de composición (E, C, R)
+   * @returns {string} Descripción formateada
+   */
+  _formatearComposicion(composicion) {
+    if (!composicion) return ''
+    
+    // Convertir a array de letras únicas y ordenarlas
+    const letras = [...new Set([...composicion])].sort()
+    
+    // Unir con guiones y espacios
+    return letras.join(' - ')
   }
 }

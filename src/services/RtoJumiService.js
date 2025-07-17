@@ -187,6 +187,7 @@ export default {
           depositoReal: 0,
           depositoEsperado: 0,
           diferencia: 0,
+          composicionEsperado: '', // Nuevo campo para la composición
           estado: 'PENDIENTE',
           movimientoFinanciero: null,
           deposits: []
@@ -202,6 +203,17 @@ export default {
       repartosPorNumero[repartoKey].depositoEsperado += esperado
       repartosPorNumero[repartoKey].diferencia += diferencia
       
+      // Agregar información de composición esperada
+      if (deposit.composicion_esperado) {
+        // Si ya existe composición, combinar sin duplicar
+        const composicionActual = repartosPorNumero[repartoKey].composicionEsperado || ''
+        const nuevaComposicion = deposit.composicion_esperado
+        
+        // Crear conjunto único de letras de composición
+        const letrasUnicas = new Set([...composicionActual, ...nuevaComposicion])
+        repartosPorNumero[repartoKey].composicionEsperado = Array.from(letrasUnicas).sort().join('')
+      }
+      
       // El estado del reparto será determinado por la lógica del frontend
       repartosPorNumero[repartoKey].estado = deposit.estado || 'PENDIENTE'
       
@@ -209,6 +221,7 @@ export default {
       const depositInfo = {
         ...deposit,
         tieneDiferencia: deposit.tiene_diferencia || false,
+        composicionEsperado: deposit.composicion_esperado || '',
         // Debug: Asegurar que tenemos el ID correcto
         depositId: deposit.id || deposit.deposit_id || deposit.identifier || 'NO_ID'
       }
@@ -242,6 +255,9 @@ export default {
       } else {
         reparto.estado = 'PENDIENTE'
       }
+      
+      // Agregar descripción formateada de la composición
+      reparto.composicionEsperadoDescripcion = this._formatearComposicion(reparto.composicionEsperado)
       
       repartos.push(reparto)
     })
@@ -740,4 +756,34 @@ export default {
     const year = today.getFullYear()
     return `${day}/${month}/${year}`
   },
+
+  /**
+   * Formatea la composición esperada en texto legible
+   * @param {string} composicion - String con letras de composición (E, C, R)
+   * @returns {string} Descripción formateada
+   */
+  formatearComposicionEsperada(composicion) {
+    if (!composicion) return ''
+    
+    // Convertir a array de letras únicas y ordenarlas
+    const letras = [...new Set([...composicion])].sort()
+    
+    // Unir con guiones y espacios
+    return letras.join(' - ')
+  },
+
+  /**
+   * Función auxiliar para formatear composición - disponible dentro del contexto del objeto
+   * @param {string} composicion - String con letras de composición (E, C, R)
+   * @returns {string} Descripción formateada
+   */
+  _formatearComposicion(composicion) {
+    if (!composicion) return ''
+    
+    // Convertir a array de letras únicas y ordenarlas
+    const letras = [...new Set([...composicion])].sort()
+    
+    // Unir con guiones y espacios
+    return letras.join(' - ')
+  }
 }

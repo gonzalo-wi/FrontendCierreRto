@@ -28,6 +28,15 @@
         {{ formatCurrency(reparto.depositoEsperado) }}
       </div>
       <div class="text-xs text-gray-500">Esperado</div>
+      <!-- Composición esperada -->
+      <div v-if="reparto.composicionEsperadoDescripcion" class="text-xs text-indigo-600 font-medium mt-1 flex items-center justify-end space-x-1">
+        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+        </svg>
+        <span :title="`Composición: ${reparto.composicionEsperado || 'No especificada'}`">
+          {{ reparto.composicionEsperadoDescripcion }}
+        </span>
+      </div>
     </td>
 
     <!-- Depósito Real - Compacto -->
