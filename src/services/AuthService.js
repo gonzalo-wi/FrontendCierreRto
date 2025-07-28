@@ -1,250 +1,326 @@
-import config from '../config/config.js'
+import axios from 'axios'
+import config from '@/config'
 
-// Servicio de autenticación para conectar con el backend usando Basic Auth
 class AuthService {
   constructor() {
-    this.baseURL = config.API_BASE_URL
+    this.API_URL = config.API_URL + '/fix'
+    
+    // Configurar axios interceptors para añadir el token automáticamente
+    this.setupAxiosInterceptors()
   }
 
-  /**
-   * Realiza el login con usuario y contraseña usando Basic Auth
-   * @param {string} username - Nombre de usuario
-   * @param {string} password - Contraseña
-   * @returns {Promise<Object>} - Datos del usuario
-   */
+  setupAxiosInterceptors() {
+    // Request interceptor - añadir token a todas las requests
+    axios.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem('auth_token')
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+        }
+        return config
+      },
+      (error) => {
+        return Promise.reject(error)
+      }
+    )
+
+    // Response interceptor - manejar tokens expirados
+    axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          // Token expirado o inválido
+          this.logout()
+        }
+        return Promise.reject(error)
+      }
+    )
+  }
+
   async login(username, password) {
     try {
-      // Si estamos en modo desarrollo, usar simulación
-      if (config.DEV_MODE) {
-        return this.simulateLogin(username, password)
-      }
-
-      // Crear Basic Auth header
-      const basicAuth = "Basic " + btoa(`${username}:${password}`)
-
-      // Hacer petición directa a /usuario/me con Basic Auth
-      const response = await fetch(`${this.baseURL}${config.AUTH_ENDPOINTS.CURRENT_USER}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': basicAuth,
-          'Content-Type': 'application/json'
-        },
-        mode: 'cors'
+      console.log('🔐 Intentando login con:', { username })
+      
+      const response = await axios.post(`${this.API_URL}/login`, {
+        username,
+        password
       })
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Usuario o contraseña incorrectos')
+      console.log('✅ Respuesta de login:', response.data)
+
+      if (response.data && response.data.access_token) {
+        const { access_token, user } = response.data
+        
+        // Guardar token en localStorage
+        localStorage.setItem('auth_token', access_token)
+        
+        // Enriquecer datos del usuario con información adicional
+        const enrichedUserData = {
+          ...user,
+          token: access_token,
+          isAuthenticated: true,
+          permissions: this.getPermissionsByRole(user.role)
         }
-        if (response.status === 403) {
-          throw new Error('Acceso denegado')
-        }
-        if (response.status === 0) {
-          throw new Error('Error de conexión con el servidor. Verifica que el backend esté corriendo y configurado para CORS.')
-        }
-        throw new Error(`Error del servidor: ${response.status}`)
-      }
-
-      const userData = await response.json()
-      
-      // Almacenar las credenciales de Basic Auth para futuras peticiones
-      this.setAuthCredentials(username, password)
-      
-      // Agregar información de login
-      const enrichedUserData = {
-        ...userData,
-        username: username,
-        loginTime: new Date().toISOString(),
-        authType: 'basic'
-      }
-
-      return enrichedUserData
-    } catch (error) {
-      console.error('Error en login:', error)
-      
-      // Manejar errores de red específicos
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        throw new Error('No se puede conectar al servidor. Verifica que el backend esté corriendo en http://localhost:8080 y configurado para CORS.')
-      }
-      
-      throw error
-    }
-  }
-
-  /**
-   * Simulación de login para desarrollo
-   * @param {string} username - Nombre de usuario
-   * @param {string} password - Contraseña
-   * @returns {Promise<Object>} - Datos simulados del usuario
-   */
-  async simulateLogin(username, password) {
-    // Simular delay de red
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Buscar usuario en la lista de desarrollo
-    const user = config.DEV_USERS.find(u => u.username === username && u.password === password)
-    
-    if (!user) {
-      throw new Error('Usuario o contraseña incorrectos')
-    }
-
-    // Generar datos simulados
-    const userData = {
-      username: user.username,
-      roles: [user.role],
-      id: Math.floor(Math.random() * 1000) + 1,
-      loginTime: new Date().toISOString(),
-      authType: 'simulated'
-    }
-
-    // Almacenar credenciales simuladas
-    this.setAuthCredentials(username, password)
-
-    console.log('🔧 Modo desarrollo: Login simulado exitoso', userData)
-    return userData
-  }
-
-  /**
-   * Obtiene los datos del usuario actual usando Basic Auth
-   * @returns {Promise<Object>} - Datos del usuario
-   */
-  async getCurrentUser() {
-    try {
-      const credentials = this.getAuthCredentials()
-      if (!credentials) {
-        throw new Error('No hay credenciales almacenadas')
-      }
-
-      // Si estamos en modo desarrollo y las credenciales son simuladas
-      if (config.DEV_MODE) {
-        const savedUser = localStorage.getItem('user') || sessionStorage.getItem('user')
-        if (savedUser) {
-          const userData = JSON.parse(savedUser)
-          console.log('🔧 Modo desarrollo: Usuario desde storage', userData)
-          return userData
-        }
-        // Si no hay datos guardados, devolver usuario por defecto
+        
+        // Guardar datos del usuario
+        localStorage.setItem('user_data', JSON.stringify(enrichedUserData))
+        
+        console.log('✅ Usuario autenticado:', enrichedUserData)
+        
+        // Retornar en el formato esperado por useAuth
         return {
-          username: credentials.username,
-          id: 1,
-          roles: ['admin']
+          success: true,
+          user: enrichedUserData
         }
+      } else {
+        throw new Error('Respuesta de login inválida')
       }
-
-      // Usar Basic Auth con el backend real
-      const basicAuth = "Basic " + btoa(`${credentials.username}:${credentials.password}`)
-
-      const response = await fetch(`${this.baseURL}${config.AUTH_ENDPOINTS.CURRENT_USER}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': basicAuth,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Credenciales inválidas')
-        }
-        throw new Error(`Error del servidor: ${response.status}`)
-      }
-
-      return response.json()
     } catch (error) {
-      console.error('Error obteniendo usuario actual:', error)
-      throw error
+      console.error('❌ Error en login:', error)
+      
+      // Limpiar cualquier dato previo
+      this.logout()
+      
+      // Manejo mejorado de errores
+      if (error.response?.status === 401) {
+        return {
+          success: false,
+          error: 'Credenciales incorrectas'
+        }
+      } else if (error.response?.status === 403) {
+        return {
+          success: false,
+          error: 'Acceso denegado'
+        }
+      } else if (error.response?.status === 500) {
+        console.error('🔥 Error interno del servidor:', error.response?.data)
+        return {
+          success: false,
+          error: 'Error interno del servidor. Contacte al administrador.'
+        }
+      } else if (error.response?.data?.detail) {
+        return {
+          success: false,
+          error: `Error en el proceso de login: ${error.response.data.detail}`
+        }
+      } else if (error.code === 'ECONNREFUSED') {
+        return {
+          success: false,
+          error: 'No se puede conectar al servidor de autenticación'
+        }
+      } else {
+        return {
+          success: false,
+          error: 'Error de conexión con el servidor'
+        }
+      }
     }
   }
 
-  /**
-   * Verifica si las credenciales actuales son válidas
-   * @returns {Promise<boolean>} - True si las credenciales son válidas
-   */
-  async validateToken() {
+  async logout() {
     try {
-      await this.getCurrentUser()
-      return true
+      // Opcional: llamar al endpoint de logout del backend
+      const token = localStorage.getItem('auth_token')
+      if (token) {
+        await axios.post(`${this.API_URL}/logout`)
+      }
     } catch (error) {
+      console.error('Error en logout del servidor:', error)
+    } finally {
+      // Limpiar datos locales siempre
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user_data')
+      console.log('🔓 Sesión cerrada')
+    }
+  }
+
+  getCurrentUser() {
+    try {
+      const userData = localStorage.getItem('user_data')
+      const token = localStorage.getItem('auth_token')
+      
+      if (userData && token) {
+        const user = JSON.parse(userData)
+        return {
+          ...user,
+          isAuthenticated: true
+        }
+      }
+      
+      return null
+    } catch (error) {
+      console.error('Error al obtener usuario actual:', error)
+      this.logout() // Limpiar datos corruptos
+      return null
+    }
+  }
+
+  isAuthenticated() {
+    const token = localStorage.getItem('auth_token')
+    const userData = localStorage.getItem('user_data')
+    return !!(token && userData)
+  }
+
+  getToken() {
+    return localStorage.getItem('auth_token')
+  }
+
+  // Sistema de permisos basado en roles
+  getPermissionsByRole(role) {
+    const permissions = {
+      SUPERADMIN: [
+        'view_all',
+        'manage_repartos',
+        'manage_users',
+        'system_admin',
+        'export_data',
+        'view_reports'
+      ],
+      ADMIN: [
+        'view_all',
+        'manage_repartos',
+        'export_data',
+        'view_reports'
+      ],
+      USUARIO: [
+        'view_all',
+        'view_reports'
+      ]
+    }
+    
+    return permissions[role] || []
+  }
+
+  hasPermission(permission) {
+    const user = this.getCurrentUser()
+    if (!user) return false
+    
+    return user.permissions?.includes(permission) || false
+  }
+
+  canManageRepartos() {
+    return this.hasPermission('manage_repartos')
+  }
+
+  canManageUsers() {
+    return this.hasPermission('manage_users')
+  }
+
+  canExportData() {
+    return this.hasPermission('export_data')
+  }
+
+  isAdmin() {
+    const user = this.getCurrentUser()
+    return user?.role === 'ADMIN' || user?.role === 'SUPERADMIN'
+  }
+
+  isSuperAdmin() {
+    const user = this.getCurrentUser()
+    return user?.role === 'SUPERADMIN'
+  }
+
+  // Verificar si el token sigue siendo válido
+  async verifyToken() {
+    try {
+      const token = this.getToken()
+      if (!token) return false
+
+      const response = await axios.get(`${this.API_URL}/verify-token`)
+      return response.status === 200
+    } catch (error) {
+      console.error('Token inválido:', error)
+      this.logout()
       return false
     }
   }
 
-  /**
-   * Realiza logout
-   * @returns {Promise<void>}
-   */
-  async logout() {
+  // Refrescar token si el backend lo soporta
+  async refreshToken() {
     try {
-      // Simplemente limpiar credenciales locales ya que Basic Auth no requiere logout del servidor
-      console.log('Cerrando sesión...')
+      const response = await axios.post(`${this.API_URL}/refresh-token`)
+      
+      if (response.data.access_token) {
+        localStorage.setItem('auth_token', response.data.access_token)
+        
+        // Actualizar datos del usuario si se incluyen
+        if (response.data.user) {
+          const currentUser = this.getCurrentUser()
+          const updatedUser = {
+            ...currentUser,
+            ...response.data.user,
+            token: response.data.access_token
+          }
+          localStorage.setItem('user_data', JSON.stringify(updatedUser))
+        }
+        
+        return true
+      }
+      
+      return false
     } catch (error) {
-      console.error('Error en logout:', error)
-    } finally {
-      // Limpiar credenciales locales
-      this.clearAuthCredentials()
+      console.error('Error al refrescar token:', error)
+      this.logout()
+      return false
     }
   }
 
-  /**
-   * Almacena las credenciales de Basic Auth
-   * @param {string} username - Nombre de usuario
-   * @param {string} password - Contraseña
-   */
-  setAuthCredentials(username, password) {
-    const credentials = { username, password }
-    localStorage.setItem('auth_credentials', JSON.stringify(credentials))
-  }
-
-  /**
-   * Obtiene las credenciales de Basic Auth almacenadas
-   * @returns {Object|null} - Credenciales o null si no existen
-   */
-  getAuthCredentials() {
-    const stored = localStorage.getItem('auth_credentials')
-    return stored ? JSON.parse(stored) : null
-  }
-
-  /**
-   * Elimina las credenciales de autenticación
-   */
-  clearAuthCredentials() {
-    localStorage.removeItem('auth_credentials')
-    sessionStorage.removeItem('user')
-    localStorage.removeItem('user')
-  }
-
-  /**
-   * Verifica si hay credenciales almacenadas
-   * @returns {boolean} - True si hay credenciales
-   */
-  hasAuthCredentials() {
-    return !!this.getAuthCredentials()
-  }
-
-  // Métodos para mantener compatibilidad con código existente
-  setAuthToken(token) {
-    // No usado en Basic Auth, pero mantenido para compatibilidad
-  }
-
-  getAuthToken() {
-    // No usado en Basic Auth, pero mantenido para compatibilidad
-    return this.getAuthCredentials() ? 'basic-auth-present' : null
-  }
-
-  clearAuthToken() {
-    this.clearAuthCredentials()
-  }
-
-  hasAuthToken() {
-    return this.hasAuthCredentials()
-  }
-
-  setBaseURL(url) {
-    this.baseURL = url
+  // Diagnóstico de conectividad del backend
+  async checkBackendHealth() {
+    try {
+      console.log('🔍 [HEALTH] Verificando conectividad del backend...')
+      
+      // Intentar hacer ping al servidor usando el endpoint fix/login como test
+      const response = await axios.get(`${this.API_URL.replace('/fix', '')}/health`, {
+        timeout: 5000 // 5 segundos timeout
+      })
+      
+      console.log('✅ [HEALTH] Backend disponible:', response.status)
+      return {
+        available: true,
+        status: response.status,
+        message: 'Servidor disponible'
+      }
+    } catch (error) {
+      console.error('❌ [HEALTH] Backend no disponible:', error)
+      
+      // Si falla el health check, intentar con el endpoint de login como backup
+      try {
+        console.log('🔄 [HEALTH] Probando endpoint de login como backup...')
+        const loginTest = await axios.get(`${this.API_URL}/login`, {
+          timeout: 3000
+        })
+        
+        return {
+          available: true,
+          status: 'PARTIAL',
+          message: 'Servidor disponible (endpoint /fix/login operativo)'
+        }
+      } catch (loginError) {
+        if (error.code === 'ECONNREFUSED') {
+          return {
+            available: false,
+            error: 'ECONNREFUSED',
+            message: 'Servidor no ejecutándose en localhost:8001'
+          }
+        } else if (error.code === 'TIMEOUT') {
+          return {
+            available: false,
+            error: 'TIMEOUT',
+            message: 'Servidor no responde (timeout)'
+          }
+        } else {
+          return {
+            available: false,
+            error: error.code || 'UNKNOWN',
+            message: 'Error de conectividad'
+          }
+        }
+      }
+    }
   }
 }
 
-// Crear instancia singleton
+// Exportar instancia singleton
 const authService = new AuthService()
-
 export default authService

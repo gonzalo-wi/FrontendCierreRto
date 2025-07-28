@@ -6,7 +6,7 @@ const API_BASE_URL = '/api-backend'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 15000, // Aumentado a 15 segundos
+  timeout: 60000, // Aumentado a 60 segundos para consultas pesadas
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -19,10 +19,30 @@ const requestCache = new Map()
 // Flag para determinar si usar datos simulados
 const USAR_DATOS_SIMULADOS = import.meta.env.VITE_USE_MOCK_DATA === 'true' || import.meta.env.DEV
 
+// Interceptor para añadir el token de autorización
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
 apiClient.interceptors.response.use(
   response => response,
   error => {
     console.error('Error en la petición de totales:', error)
+    if (error.response?.status === 401) {
+      console.error('❌ Token expirado o inválido - limpiando localStorage')
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user')
+      window.location.href = '/login'
+    }
     return Promise.reject(error)
   }
 )

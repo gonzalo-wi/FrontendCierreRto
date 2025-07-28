@@ -8,52 +8,21 @@ const isAuthenticated = computed(() => !!user.value)
 
 // Función para verificar si hay una sesión guardada
 const checkAuthStatus = async () => {
-  // En modo desarrollo, solo verificar sesión local, no hacer llamadas al backend
-  if (config.DEV_MODE) {
-    // Solo verificar almacenamiento local/sesión
-    const savedUser = localStorage.getItem('user')
-    if (savedUser) {
-      try {
-        user.value = JSON.parse(savedUser)
-        return true
-      } catch (e) {
-        localStorage.removeItem('user')
-      }
-    }
-
-    const sessionUser = sessionStorage.getItem('user')
-    if (sessionUser) {
-      try {
-        user.value = JSON.parse(sessionUser)
-        return true
-      } catch (e) {
-        sessionStorage.removeItem('user')
-      }
-    }
-
-    return false
-  }
-
-  // Modo producción: verificar si hay token y es válido
-  if (authService.hasAuthToken()) {
-    try {
-      const userData = await authService.getCurrentUser()
-      user.value = userData
-      return true
-    } catch (error) {
-      console.error('Error verificando sesión:', error)
-      // Si hay error, limpiar datos
-      authService.clearAuthToken()
-      user.value = null
-      return false
-    }
+  // Verificar si hay datos de autenticación JWT guardados
+  const currentUser = authService.getCurrentUser()
+  if (currentUser && authService.isAuthenticated()) {
+    user.value = currentUser
+    console.log('✅ [AUTH] Usuario autenticado encontrado:', currentUser)
+    return true
   }
 
   // También verificar método anterior para compatibilidad
   const savedUser = localStorage.getItem('user')
   if (savedUser) {
     try {
-      user.value = JSON.parse(savedUser)
+      const userData = JSON.parse(savedUser)
+      user.value = userData
+      console.log('✅ [AUTH] Usuario de localStorage encontrado:', userData)
       return true
     } catch (e) {
       localStorage.removeItem('user')
@@ -63,38 +32,59 @@ const checkAuthStatus = async () => {
   const sessionUser = sessionStorage.getItem('user')
   if (sessionUser) {
     try {
-      user.value = JSON.parse(sessionUser)
+      const userData = JSON.parse(sessionUser)
+      user.value = userData
+      console.log('✅ [AUTH] Usuario de sessionStorage encontrado:', userData)
       return true
     } catch (e) {
       sessionStorage.removeItem('user')
     }
   }
 
+  console.log('❌ [AUTH] No se encontró usuario autenticado')
   return false
 }
 
 // Función para iniciar sesión
 const login = async (username, password, remember = false) => {
   try {
-    const userData = await authService.login(username, password)
-    user.value = userData
+    const result = await authService.login(username, password)
     
-    // Guardar datos adicionales para compatibilidad
-    const userDataToStore = {
-      ...userData,
-      loginTime: new Date().toISOString()
-    }
-    
-    if (remember) {
-      localStorage.setItem('user', JSON.stringify(userDataToStore))
+    if (result && result.success) {
+      user.value = result.user
+      
+      // Guardar datos adicionales para compatibilidad
+      const userDataToStore = {
+        ...result.user,
+        loginTime: new Date().toISOString()
+      }
+      
+      if (remember) {
+        localStorage.setItem('user', JSON.stringify(userDataToStore))
+      } else {
+        sessionStorage.setItem('user', JSON.stringify(userDataToStore))
+      }
+      
+      console.log('✅ [AUTH] Usuario autenticado:', result.user)
+      return result
     } else {
-      sessionStorage.setItem('user', JSON.stringify(userDataToStore))
+      // Si result.success es false, usar el error del resultado
+      const errorMessage = result?.error || 'Error en login'
+      console.error('❌ [AUTH] Login fallido:', errorMessage)
+      throw new Error(errorMessage)
+    }
+  } catch (error) {
+    console.error('❌ [AUTH] Error en login:', error)
+    
+    // Categorizar el error para mejor UX
+    if (error.message.includes('Error interno del servidor')) {
+      console.error('🔥 [AUTH] Error crítico del backend - revisar logs del servidor')
+    } else if (error.message.includes('No se puede conectar')) {
+      console.error('🌐 [AUTH] Servidor no disponible')
+    } else if (error.message.includes('Credenciales incorrectas')) {
+      console.error('🔑 [AUTH] Credenciales inválidas')
     }
     
-    console.log('Usuario autenticado:', userData)
-    return userData
-  } catch (error) {
-    console.error('Error en login:', error)
     throw error
   }
 }
@@ -121,6 +111,32 @@ const getUserData = () => {
   return user.value
 }
 
+// Función para verificar permisos
+const checkPermissions = (permission) => {
+  return authService.hasPermission(permission)
+}
+
+// Funciones de permisos específicas
+const canManageRepartos = () => {
+  return authService.canManageRepartos()
+}
+
+const canManageUsers = () => {
+  return authService.canManageUsers()
+}
+
+const canExportData = () => {
+  return authService.canExportData()
+}
+
+const isAdmin = () => {
+  return authService.isAdmin()
+}
+
+const isSuperAdmin = () => {
+  return authService.isSuperAdmin()
+}
+
 // Exportar el composable
 export const useAuth = () => {
   return {
@@ -130,6 +146,12 @@ export const useAuth = () => {
     logout,
     checkAuthStatus,
     hasRole,
-    getUserData
+    getUserData,
+    checkPermissions,
+    canManageRepartos,
+    canManageUsers,
+    canExportData,
+    isAdmin,
+    isSuperAdmin
   }
 }

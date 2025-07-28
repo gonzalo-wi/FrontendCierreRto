@@ -1,4 +1,5 @@
 <template>
+  <!-- El LoginForm maneja todo el diseño, este componente solo maneja la lógica de navegación -->
   <LoginForm @login-success="handleLoginSuccess" />
 </template>
 

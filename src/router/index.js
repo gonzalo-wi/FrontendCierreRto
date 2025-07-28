@@ -5,6 +5,7 @@ import TablaLaPlataViews from '../views/TablaLaPlataViews.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import ComprobantesDemo from '../views/ComprobantesDemo.vue'
+import UserManagementView from '../views/UserManagementView.vue'
 
 const routes = [
   {
@@ -40,6 +41,12 @@ const routes = [
     path: '/comprobantes-demo',
     name: 'ComprobantesDemo',
     component: ComprobantesDemo
+  },
+  {
+    path: '/admin/users',
+    name: 'UserManagement',
+    component: UserManagementView,
+    meta: { requiresSuperAdmin: true }
   }
 ]
 
@@ -52,7 +59,38 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   console.log('Router guard ejecutándose para:', to.path)
   
-  // TEMPORALMENTE PERMITIR TODAS LAS RUTAS SIN AUTENTICACIÓN
+  // Verificar si la ruta requiere permisos de SuperAdmin
+  if (to.meta.requiresSuperAdmin) {
+    try {
+      const { useAuth } = await import('../composables/useAuth.js')
+      const { isSuperAdmin, isAuthenticated } = useAuth()
+      
+      console.log('🔍 Verificando autenticación y permisos...')
+      console.log('✅ isAuthenticated.value:', isAuthenticated.value)
+      console.log('✅ isSuperAdmin():', isSuperAdmin())
+      
+      if (!isAuthenticated.value) {
+        console.log('❌ Usuario no autenticado, redirigiendo a login')
+        next('/login')
+        return
+      }
+      
+      if (!isSuperAdmin()) {
+        console.log('❌ Usuario no es SuperAdmin, acceso denegado')
+        alert('❌ Acceso denegado. Solo SuperAdmins pueden acceder a esta sección.')
+        next(from.path || '/')
+        return
+      }
+      
+      console.log('✅ SuperAdmin verificado, permitiendo acceso')
+    } catch (error) {
+      console.error('❌ Error verificando permisos:', error)
+      next('/login')
+      return
+    }
+  }
+  
+  // TEMPORALMENTE PERMITIR TODAS LAS OTRAS RUTAS SIN AUTENTICACIÓN
   next()
   
   /* GUARD DE AUTENTICACIÓN ORIGINAL (COMENTADO PARA DESARROLLO)

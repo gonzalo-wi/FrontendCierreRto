@@ -260,9 +260,11 @@ export default {
       
       switch(estado) {
         case 'PENDIENTE':
-          return `${baseClasses} estado-pendiente`
+          return `${baseClasses} estado-pendiente` // Rojo
         case 'LISTO':
-          return `${baseClasses} estado-listo`
+          return `${baseClasses} estado-listo` // Amarillo
+        case 'ENVIADO':
+          return `${baseClasses} estado-enviado` // Verde
         default:
           return `${baseClasses} estado-default`
       }
@@ -326,23 +328,34 @@ export default {
 }
 
 .estado-pendiente {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-color: #ef4444;
+}
+
+.estado-pendiente:hover {
+  background-color: #fecaca;
+  border-color: #dc2626;
+}
+
+.estado-listo {
   background-color: #fef3c7;
   color: #92400e;
   border-color: #f59e0b;
 }
 
-.estado-pendiente:hover {
+.estado-listo:hover {
   background-color: #fde68a;
   border-color: #d97706;
 }
 
-.estado-listo {
+.estado-enviado {
   background-color: #d1fae5;
   color: #065f46;
   border-color: #10b981;
 }
 
-.estado-listo:hover {
+.estado-enviado:hover {
   background-color: #a7f3d0;
   border-color: #059669;
 }

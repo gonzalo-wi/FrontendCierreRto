@@ -12,11 +12,30 @@ const apiClient = axios.create({
   }
 })
 
+// Interceptor para añadir el token de autorización
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
 
 apiClient.interceptors.response.use(
   response => response,
   error => {
     console.error('Error en la petición:', error)
+    if (error.response?.status === 401) {
+      console.error('❌ Token expirado o inválido - limpiando localStorage')
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user')
+      window.location.href = '/login'
+    }
     return Promise.reject(error)
   }
 )
@@ -765,11 +784,8 @@ export default {
   formatearComposicionEsperada(composicion) {
     if (!composicion) return ''
     
-    // Convertir a array de letras únicas y ordenarlas
-    const letras = [...new Set([...composicion])].sort()
-    
-    // Unir con guiones y espacios
-    return letras.join(' - ')
+    // Separar las letras con guiones: E - C - R
+    return [...composicion].join(' - ')
   },
 
   /**
@@ -780,10 +796,7 @@ export default {
   _formatearComposicion(composicion) {
     if (!composicion) return ''
     
-    // Convertir a array de letras únicas y ordenarlas
-    const letras = [...new Set([...composicion])].sort()
-    
-    // Unir con guiones y espacios
-    return letras.join(' - ')
+    // Separar las letras con guiones: E - C - R
+    return [...composicion].join(' - ')
   }
 }

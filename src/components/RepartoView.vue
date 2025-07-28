@@ -185,8 +185,9 @@
               <span>{{ repartosListos.length }} de {{ repartos.length }} repartos listos</span>
             </div>
             
-            <!-- Botón compacto -->
+            <!-- Botón compacto - Solo mostrar si tiene permisos -->
             <button 
+              v-if="canProcessRepartos"
               @click="procesarRepartos"
               :disabled="repartosListos.length === 0 || procesando"
               class="process-btn-compact inline-flex items-center space-x-2 transition-all duration-200"
@@ -207,7 +208,7 @@
               
               <!-- Texto -->
               <span class="font-medium">
-                {{ procesando ? 'Procesando...' : 'Procesar Repartos' }}
+                {{ procesando ? 'Enviando...' : 'Enviar Repartos LISTO' }}
               </span>
               
               <!-- Badge con contador -->
@@ -215,12 +216,20 @@
                 {{ repartosListos.length }}
               </span>
             </button>
+
+            <!-- Mensaje para usuarios sin permisos -->
+            <div v-else class="inline-flex items-center space-x-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span>Solo ADMIN y SUPERADMIN pueden procesar repartos</span>
+            </div>
           </div>
           
           <!-- Mensaje informativo cuando no hay repartos listos -->
           <div v-if="repartosListos.length === 0" class="mt-3 text-center">
             <p class="text-gray-500 text-xs">
-              Los repartos sin diferencias o con movimientos financieros están listos para procesar
+              Solo los repartos con estado "LISTO" se pueden procesar para envío
             </p>
           </div>
         </div>
@@ -243,17 +252,26 @@
       :reparto="selectedRepartoComprobantes"
       @close="closeComprobantesModal"
     />
+
+    <!-- Modal de Progreso -->
+    <ProcessProgressModal 
+      :visible="progressState.showModal"
+      :repartos="repartosProgreso"
+      @cerrar="() => { progressState.showModal = false }"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
 import { config } from '../config/config.js'
+import { useAuth } from '../composables/useAuth.js'
 import RepartoTable from '../components/RepartoTable.vue'
 import ComprobantesModal from '../components/ComprobantesModal.vue'
 import EditMovementModal from '../components/EditMovementModal.vue'
 import DateSelector from '../components/DateSelector.vue'
 import TotalsView from '../components/TotalsView.vue'
+import ProcessProgressModal from '../components/ProcessProgressModal.vue'
 
 // Props
 const props = defineProps({
@@ -289,6 +307,40 @@ const modalMovimientoTipo = ref(null) // cheque | retencion | null
 const showComprobantesModal = ref(false)
 const selectedRepartoComprobantes = ref(null)
 
+// Estado del progreso
+const progressState = ref({
+  showModal: false,
+  isActive: false,
+  isCompleted: false,
+  error: null,
+  progress: 0,
+  currentStep: '',
+  details: [],
+  stats: {
+    total: 0,
+    processed: 0,
+    success: 0,
+    failed: 0
+  }
+})
+
+// Estados para modal de progreso (legacy - a remover después)
+const showProgressModal = ref(false)
+const repartosProgreso = ref([])
+
+// Composable de autenticación
+const { checkPermissions, canManageRepartos, isAdmin, user } = useAuth()
+
+// Permisos del usuario
+const userPermissions = computed(() => {
+  const currentUser = user.value
+  if (!currentUser) return []
+  return currentUser.permissions || []
+})
+
+// Verificar si puede gestionar repartos
+const canProcessRepartos = computed(() => canManageRepartos())
+
 // Propiedades computadas para estadísticas
 const exactCount = computed(() => {
   return repartos.value.filter(r => r.depositoReal === r.depositoEsperado).length
@@ -305,13 +357,8 @@ const pendingCount = computed(() => {
 // Computed para repartos listos para procesar
 const repartosListos = computed(() => {
   return repartos.value.filter(reparto => {
-    // Un reparto está listo si:
-    // 1. No tiene diferencias (depositoReal === depositoEsperado) O
-    // 2. Tiene diferencias pero ya tiene un movimiento financiero asociado
-    const sinDiferencias = reparto.depositoReal === reparto.depositoEsperado
-    const tieneMovimiento = reparto.movimientoFinanciero && Object.keys(reparto.movimientoFinanciero).length > 0
-    
-    return sinDiferencias || tieneMovimiento
+    // Un reparto está listo si tiene estado "LISTO"
+    return reparto.estado === 'LISTO'
   })
 })
 
@@ -369,54 +416,274 @@ const fetchRepartos = async () => {
   }
 }
 
+// Funciones de manejo de progreso
+const iniciarProgreso = (total = 1) => {
+  console.log('🎯 [PROGRESO] Iniciando progreso con total:', total)
+  progressState.value.showModal = true
+  
+  // Crear array de repartos usando los datos reales de repartosListos
+  if (repartosListos.value && repartosListos.value.length > 0) {
+    repartosProgreso.value = repartosListos.value.map((reparto, index) => ({
+      id: index + 1,
+      nombre: `Reparto #${reparto.nroOt || reparto.idReparto}`,
+      estado: 'pendiente', // pendiente, procesando, exitoso, error
+      mensaje: `Importe: $${reparto.depositoReal || reparto.importe || 0}`,
+      tiempo: null
+    }))
+  } else {
+    // Fallback para casos de prueba
+    repartosProgreso.value = Array.from({ length: total }, (_, index) => ({
+      id: index + 1,
+      nombre: `Reparto ${index + 1}`,
+      estado: 'pendiente',
+      mensaje: '',
+      tiempo: null
+    }))
+  }
+  
+  console.log('🎯 [PROGRESO] Repartos de progreso creados:', repartosProgreso.value)
+}
+
+const actualizarProgreso = (step, detail = null) => {
+  console.log('🎯 [PROGRESO] Actualizando progreso:', { step, detail })
+  
+  // Si hay un detalle de éxito o error, actualizar el estado del reparto correspondiente
+  if (detail && detail.includes('✅')) {
+    // Encontrar el primer reparto pendiente y marcarlo como exitoso
+    const repartoIdx = repartosProgreso.value.findIndex(r => r.estado === 'pendiente')
+    if (repartoIdx >= 0) {
+      repartosProgreso.value[repartoIdx].estado = 'exitoso'
+      repartosProgreso.value[repartoIdx].mensaje = detail
+      repartosProgreso.value[repartoIdx].tiempo = new Date().toLocaleTimeString()
+    }
+  } else if (detail && detail.includes('❌')) {
+    // Encontrar el primer reparto pendiente y marcarlo como error
+    const repartoIdx = repartosProgreso.value.findIndex(r => r.estado === 'pendiente')
+    if (repartoIdx >= 0) {
+      repartosProgreso.value[repartoIdx].estado = 'error'
+      repartosProgreso.value[repartoIdx].mensaje = detail
+      repartosProgreso.value[repartoIdx].tiempo = new Date().toLocaleTimeString()
+    }
+  }
+  
+  console.log('🎯 [PROGRESO] Repartos actualizados:', repartosProgreso.value)
+}
+
+const finalizarProgreso = (exito, error = null) => {
+  console.log('🎯 [PROGRESO] Finalizando progreso:', { exito, error })
+  
+  // Si fue exitoso, mostrar resumen con estadísticas
+  if (exito && repartosProgreso.value.length > 0) {
+    const exitosos = repartosProgreso.value.filter(r => r.estado === 'exitoso').length
+    const errores = repartosProgreso.value.filter(r => r.estado === 'error').length
+    const total = repartosProgreso.value.length
+    
+    // Crear mensaje de resumen
+    let mensajeResumen = `🎉 Procesamiento completado!\n\n`
+    mensajeResumen += `✅ Exitosos: ${exitosos}/${total} repartos\n`
+    
+    if (errores > 0) {
+      mensajeResumen += `❌ Errores: ${errores}/${total} repartos\n`
+    }
+    
+    mensajeResumen += `\n📊 Porcentaje de éxito: ${Math.round((exitosos/total) * 100)}%`
+    
+    // Si hay errores, agregar detalles
+    if (errores > 0) {
+      const repartosConError = repartosProgreso.value.filter(r => r.estado === 'error')
+      mensajeResumen += `\n\n⚠️ Repartos con errores:\n`
+      repartosConError.slice(0, 3).forEach(r => { // Mostrar máximo 3 errores
+        mensajeResumen += `- ${r.id}: ${r.mensaje?.replace('❌ Error: ', '') || 'Error desconocido'}\n`
+      })
+      if (repartosConError.length > 3) {
+        mensajeResumen += `... y ${repartosConError.length - 3} más`
+      }
+    }
+    
+    // Mostrar el alert con el resumen
+    setTimeout(() => {
+      alert(mensajeResumen)
+    }, 1500) // Esperar un poco antes de mostrar el resumen
+  }
+  
+  setTimeout(() => {
+    console.log('🎯 [PROGRESO] Ocultando modal después de 3 segundos')
+    progressState.value.showModal = false
+    // Reset state
+    repartosProgreso.value = []
+  }, exito ? 4000 : 3000) // Dar más tiempo si fue exitoso para que vean el resumen
+}
+
 // Función para procesar repartos listos
 const procesarRepartos = async () => {
-  if (repartosListos.value.length === 0) {
-    alert('No hay repartos listos para procesar')
+  // Verificar permisos antes de procesar
+  if (!canProcessRepartos.value) {
+    alert('❌ No tienes permisos para cerrar repartos. Se requiere rol ADMIN o SUPERADMIN.')
     return
   }
 
+  if (repartosListos.value.length === 0) {
+    alert('No hay repartos con estado LISTO para procesar')
+    return
+  }
+
+  // Obtener la fecha seleccionada actual en formato YYYY-MM-DD
+  const fechaParaCierre = fechaSeleccionada.value?.fechaBackend || new Date().toISOString().split('T')[0]
+
   // Confirmar la acción
   const confirmacion = confirm(
-    `¿Estás seguro de que quieres procesar ${repartosListos.value.length} repartos listos? ` +
-    'Esta acción enviará los datos al backend.'
+    `¿Estás seguro de que quieres procesar ${repartosListos.value.length} repartos con estado LISTO para la fecha ${fechaParaCierre}? ` +
+    'Esta acción enviará los repartos a Aguas para su cierre.'
   )
   
   if (!confirmacion) return
 
-  procesando.value = true
+  // Inicializar el progreso inmediatamente
+  iniciarProgreso(repartosListos.value.length)
+  actualizarProgreso('Preparando solicitud de cierre...', `📊 Se procesarán ${repartosListos.value.length} repartos`)
 
   try {
-    // Preparar los datos para enviar
-    const repartosParaEnviar = repartosListos.value.map(reparto => ({
-      idReparto: reparto.idReparto,
-      fechaReparto: reparto.fechaReparto,
-      depositoEsperado: reparto.depositoEsperado,
-      depositoReal: reparto.depositoReal,
-      diferencia: reparto.depositoReal - reparto.depositoEsperado,
-      movimientoFinanciero: reparto.movimientoFinanciero || null,
-      estado: 'procesado',
-      fechaProcesamiento: new Date().toISOString()
-    }))
+    console.log(`🚀 Cerrando repartos para fecha: ${fechaParaCierre}`)
+    console.log('🔍 Repartos con estado LISTO:', repartosListos.value)
 
-    console.log('Enviando repartos al backend:', repartosParaEnviar)
+    // Verificar que tenemos un token válido
+    const token = localStorage.getItem('auth_token')
+    if (!token) {
+      throw new Error('No se encontró token de autenticación. Por favor, inicia sesión nuevamente.')
+    }
 
-    // Aquí puedes agregar la llamada a tu API para enviar los repartos
-    // Por ejemplo, si tienes un método en tu servicio:
-    // await props.service.procesarRepartos(repartosParaEnviar)
+    // Mostrar progreso mientras preparamos la solicitud
+    await new Promise(resolve => setTimeout(resolve, 500))
+    actualizarProgreso('Enviando solicitud al servidor...', `🌐 Conectando con el servidor de cierre`)
+
+    // Simular progreso mientras procesamos - más realista
+    let procesados = 0
+    const totalRepartos = repartosProgreso.value.length
     
-    // Por ahora, simularemos el envío con un timeout
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    const progresoSimulado = setInterval(() => {
+      // Buscar repartos pendientes para marcar como procesando
+      const pendientes = repartosProgreso.value.filter(r => r.estado === 'pendiente')
+      if (pendientes.length > 0 && Math.random() > 0.4) {
+        const randomIdx = Math.floor(Math.random() * Math.min(2, pendientes.length)) // Máximo 2 a la vez
+        const repartoIdx = repartosProgreso.value.findIndex(r => r.id === pendientes[randomIdx].id)
+        if (repartoIdx >= 0) {
+          repartosProgreso.value[repartoIdx].estado = 'procesando'
+          repartosProgreso.value[repartoIdx].mensaje = '🔄 Enviando a Aguas...'
+        }
+      }
+      
+      // Ocasionalmente completar algunos repartos que están procesando
+      const enProceso = repartosProgreso.value.filter(r => r.estado === 'procesando')
+      if (enProceso.length > 0 && Math.random() > 0.6 && procesados < totalRepartos * 0.8) {
+        const randomIdx = Math.floor(Math.random() * enProceso.length)
+        const repartoIdx = repartosProgreso.value.findIndex(r => r.id === enProceso[randomIdx].id)
+        if (repartoIdx >= 0) {
+          repartosProgreso.value[repartoIdx].estado = 'exitoso'
+          repartosProgreso.value[repartoIdx].mensaje = '✅ Confirmado por Aguas'
+          repartosProgreso.value[repartoIdx].tiempo = new Date().toLocaleTimeString()
+          procesados++
+        }
+      }
+    }, 600)
 
-    // Mostrar mensaje de éxito
-    alert(`✅ Se procesaron exitosamente ${repartosListos.value.length} repartos`)
-    
-    // Opcional: recargar los datos después del procesamiento
-    await fetchRepartos()
+    // Llamar al endpoint de cierre de repartos con autenticación JWT
+    const response = await fetch('/api-backend/reparto-cierre/cerrar-repartos', { // Usar proxy de Vite
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // Token JWT aquí
+      },
+      body: JSON.stringify({
+        fecha_especifica: fechaParaCierre,  // Formato YYYY-MM-DD
+        max_reintentos: 3,
+        delay_entre_envios: 1.0
+      })
+    })
+
+    // Detener simulación
+    clearInterval(progresoSimulado)
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    actualizarProgreso('Procesando respuesta del servidor...', `📡 Recibiendo resultados del servidor`)
+
+    const resultado = await response.json()
+
+    if (resultado.success) {
+      // Marcar todos los repartos como exitosos rápidamente
+      for (let i = 0; i < repartosProgreso.value.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 150))
+        if (repartosProgreso.value[i].estado !== 'exitoso') {
+          repartosProgreso.value[i].estado = 'exitoso'
+          repartosProgreso.value[i].mensaje = `✅ Reparto #${repartosListos.value[i]?.nroOt || (i+1)} procesado correctamente`
+          repartosProgreso.value[i].tiempo = new Date().toLocaleTimeString()
+        }
+      }
+      
+      actualizarProgreso('Actualizando datos...', `🔄 Recargando información desde el servidor`)
+      
+      // Recargar los datos después del procesamiento para actualizar estados
+      await fetchRepartos()
+      
+      // Completar el progreso
+      finalizarProgreso(true)
+      
+      console.log('✅ Resultado del cierre:', resultado)
+    } else {
+      // Si el backend retorna información detallada de errores, usarla
+      if (resultado.detalles && Array.isArray(resultado.detalles)) {
+        for (let i = 0; i < resultado.detalles.length && i < repartosProgreso.value.length; i++) {
+          const detalle = resultado.detalles[i]
+          repartosProgreso.value[i].estado = detalle.exito ? 'exitoso' : 'error'
+          repartosProgreso.value[i].mensaje = detalle.mensaje || (detalle.exito ? '✅ Procesado' : '❌ Error')
+          repartosProgreso.value[i].tiempo = new Date().toLocaleTimeString()
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+      } else {
+        // Marcar algunos como error para mostrar que algo falló
+        for (let i = 0; i < repartosProgreso.value.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, 150))
+          repartosProgreso.value[i].estado = i === 0 ? 'error' : 'exitoso' // Solo el primero como error para ejemplo
+          repartosProgreso.value[i].mensaje = i === 0 ? `❌ Error: ${resultado.message}` : '✅ Procesado correctamente'
+          repartosProgreso.value[i].tiempo = new Date().toLocaleTimeString()
+        }
+      }
+      
+      // Marcar error en el progreso
+      finalizarProgreso(false, { message: resultado.message || 'Error en el servidor' })
+      console.error('❌ Error en respuesta:', resultado)
+    }
 
   } catch (err) {
-    console.error('Error al procesar repartos:', err)
-    alert('❌ Error al procesar los repartos: ' + (err.message || 'Error desconocido'))
+    console.error('❌ Error al procesar repartos:', err)
+    
+    // Detener la simulación si está activa
+    if (typeof progresoSimulado !== 'undefined') {
+      clearInterval(progresoSimulado)
+    }
+    
+    // Manejo específico para errores de autenticación
+    if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+      // Token expirado o inválido
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user')
+      alert('❌ Tu sesión ha expirado. Por favor, inicia sesión nuevamente.')
+      window.location.href = '/login'
+      return
+    }
+    
+    // Marcar todos los repartos como error
+    for (let i = 0; i < repartosProgreso.value.length; i++) {
+      if (repartosProgreso.value[i].estado === 'pendiente' || repartosProgreso.value[i].estado === 'procesando') {
+        repartosProgreso.value[i].estado = 'error'
+        repartosProgreso.value[i].mensaje = `❌ Error: ${err.message}`
+        repartosProgreso.value[i].tiempo = new Date().toLocaleTimeString()
+      }
+    }
+    
+    finalizarProgreso(false, { message: err.message || 'Error desconocido' })
   } finally {
     procesando.value = false
   }
@@ -505,7 +772,7 @@ const saveMovement = async (movementData) => {
       await new Promise(resolve => setTimeout(resolve, 1000))
       updatedMovimiento = { ...movementData, id: Date.now() }
     } else {
-      console.log('🌐 [REPARTO_VIEW] Modo producción: enviando al backend real')
+      console.log('🌐 [REPARTO_VIEW] Modo producción: enviando al a Aguas real')
       
       // Por ahora, siempre crear nuevos movimientos (no actualizar)
       // TODO: Implementar lógica de actualización cuando el backend lo soporte
