@@ -1,5 +1,17 @@
 <template>
-  <div v-if="movimiento" class="movement-container">
+  <!-- Usar el nuevo componente de lista cuando hay múltiples movimientos -->
+  <MovimientosFinancierosList
+    v-if="tieneMultiplesMovimientos"
+    :movimientos="movimiento"
+    :cheques="cheques"
+    :retenciones="retenciones"
+    :reparto="reparto"
+    :compact="true"
+    @delete-movement="handleDeleteMovement"
+  />
+
+  <!-- Vista tradicional para un solo movimiento o movimiento legacy -->
+  <div v-else-if="movimiento && !tieneMultiplesMovimientos" class="movement-container">
     <!-- Header con tipo y estado -->
     <div class="movement-header">
       <div class="movement-type-badge" :class="getTypeClass(movimiento.tipo)">
@@ -8,7 +20,7 @@
       </div>
       <div class="movement-amount">
         <span class="currency-symbol">$</span>
-        <span class="amount-value">{{ formatCurrency(movimiento.importe) }}</span>
+        <span class="amount-value">{{ formatCurrency(movimiento.importe || movimiento.montoTotal) }}</span>
       </div>
     </div>
 
@@ -20,16 +32,18 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
           </svg>
         </div>
-        <span class="detail-text">{{ movimiento.concepto }}</span>
+        <span class="detail-text">{{ movimiento.concepto || getConceptoFromTipo(movimiento.tipo) }}</span>
       </div>
       
-      <div class="detail-row">
+      <div v-if="movimiento.idCliente || movimiento.totalCheques || movimiento.totalRetenciones" class="detail-row">
         <div class="detail-icon">
           <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
           </svg>
         </div>
-        <span class="detail-text">{{ movimiento.idCliente }}</span>
+        <span class="detail-text">
+          {{ movimiento.idCliente || getResumenMovimientos(movimiento) }}
+        </span>
       </div>
       
       <div v-if="movimiento.fecha" class="detail-row">
@@ -43,7 +57,7 @@
     </div>
 
     <!-- Indicador de prioridad -->
-    <div class="priority-indicator" :class="getPriorityClass(movimiento.importe)">
+    <div class="priority-indicator" :class="getPriorityClass(movimiento.importe || movimiento.montoTotal)">
       <div class="priority-dot"></div>
     </div>
   </div>
@@ -56,22 +70,48 @@
       </svg>
     </div>
     <div class="success-content">
-      <span class="success-title">Completo</span>
-      <span class="success-subtitle">Sin pendientes</span>
+      <span class="success-title">Sin movimientos</span>
+      <span class="success-subtitle">Depósito exacto</span>
     </div>
     <div class="success-pulse"></div>
   </div>
 </template>
 
 <script setup>
-import { h } from 'vue'
+import { h, computed } from 'vue'
 import { formatCurrency, formatDate } from '../utils/formatters.js'
+import MovimientosFinancierosList from './MovimientosFinancierosList.vue'
 
-defineProps({
+const props = defineProps({
   movimiento: {
     type: Object,
     default: null
+  },
+  reparto: {
+    type: Object,
+    default: null
   }
+})
+
+// Definir emits
+const emit = defineEmits(['delete-movement'])
+
+// Handler para reenviar eventos de eliminación al padre
+const handleDeleteMovement = (eventData) => {
+  console.log('🗑️ [MovFinanciero] Reenviando evento delete-movement al padre:', eventData)
+  emit('delete-movement', eventData)
+}
+
+// Computadas para detectar múltiples movimientos
+const cheques = computed(() => props.movimiento?.cheques || [])
+const retenciones = computed(() => props.movimiento?.retenciones || [])
+const tieneMultiplesMovimientos = computed(() => {
+  const totalCheques = cheques.value.length
+  const totalRetenciones = retenciones.value.length
+  const total = totalCheques + totalRetenciones
+  
+  // Usar la nueva vista si hay múltiples movimientos O si es de tipo MIXTO
+  return total > 1 || props.movimiento?.tipo === 'MIXTO' || total === 1
 })
 
 // Función para obtener la clase CSS según el tipo de movimiento
@@ -80,7 +120,8 @@ const getTypeClass = (tipo) => {
     'CONTADO': 'type-contado',
     'CUENTA_CORRIENTE': 'type-cuenta-corriente', 
     'CHEQUE': 'type-cheque',
-    'RETENCION': 'type-retencion'
+    'RETENCION': 'type-retencion',
+    'MIXTO': 'type-mixto'
   }
   return classes[tipo] || 'type-default'
 }
@@ -91,7 +132,8 @@ const getTypeDisplayName = (tipo) => {
     'CONTADO': 'Contado',
     'CUENTA_CORRIENTE': 'Cta. Corriente',
     'CHEQUE': 'Cheque',
-    'RETENCION': 'Retención'
+    'RETENCION': 'Retención',
+    'MIXTO': 'Mixto'
   }
   return names[tipo] || tipo
 }
@@ -150,6 +192,19 @@ const getTypeIcon = (tipo) => {
         'stroke-width': '2',
         d: 'M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z'
       })
+    ]),
+    'MIXTO': () => h('svg', {
+      class: 'w-3 h-3',
+      fill: 'none',
+      stroke: 'currentColor',
+      viewBox: '0 0 24 24'
+    }, [
+      h('path', {
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round',
+        'stroke-width': '2',
+        d: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'
+      })
     ])
   }
   return icons[tipo] || icons['CONTADO']
@@ -160,6 +215,30 @@ const getPriorityClass = (importe) => {
   if (importe > 100000) return 'priority-high'
   if (importe > 50000) return 'priority-medium'
   return 'priority-low'
+}
+
+// Función para obtener concepto desde tipo
+const getConceptoFromTipo = (tipo) => {
+  const conceptos = {
+    'CHEQUE': 'Pago con cheque',
+    'RETENCION': 'Retención aplicada',
+    'MIXTO': 'Movimientos múltiples',
+    'CONTADO': 'Pago en efectivo',
+    'CUENTA_CORRIENTE': 'Cuenta corriente'
+  }
+  return conceptos[tipo] || 'Movimiento financiero'
+}
+
+// Función para obtener resumen de movimientos
+const getResumenMovimientos = (movimiento) => {
+  const parts = []
+  if (movimiento.totalCheques > 0) {
+    parts.push(`${movimiento.totalCheques} cheque${movimiento.totalCheques !== 1 ? 's' : ''}`)
+  }
+  if (movimiento.totalRetenciones > 0) {
+    parts.push(`${movimiento.totalRetenciones} retención${movimiento.totalRetenciones !== 1 ? 'es' : ''}`)
+  }
+  return parts.join(', ') || 'Sin detalles'
 }
 </script>
 
@@ -231,6 +310,12 @@ const getPriorityClass = (importe) => {
   background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
   color: #be185d;
   border: 1px solid #f9a8d4;
+}
+
+.type-mixto {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #3730a3;
+  border: 1px solid #a5b4fc;
 }
 
 .type-default {

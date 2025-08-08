@@ -258,7 +258,9 @@ export default {
     })
     
     // Convertir a array y calcular estados finales
-    Object.values(repartosPorNumero).forEach(reparto => {
+    const repartosFinales = []
+    
+    for (const reparto of Object.values(repartosPorNumero)) {
       // Determinar el estado final del reparto basado en todos sus depósitos
       const estadosDepositos = reparto.deposits.map(d => d.estado)
       const tieneDiferencias = reparto.deposits.some(d => d.tiene_diferencia)
@@ -276,13 +278,102 @@ export default {
       }
       
       // Agregar descripción formateada de la composición
-      reparto.composicionEsperadoDescripcion = this._formatearComposicion(reparto.composicionEsperado)
+      reparto.composicionEsperadoDescripción = this._formatearComposicion(reparto.composicionEsperado)
       
-      repartos.push(reparto)
-    })
+      // Cargar cheques y retenciones de los datos que ya vienen en cada depósito (nueva estructura del backend)
+      try {
+        console.log(`🔍 [JUMILLANO] Cargando movimientos para reparto ${reparto.idReparto}`)
+        let montoTotalMovimientos = 0
+        let totalCheques = 0
+        let totalRetenciones = 0
+        
+        // Inicializar arrays de movimientos en el reparto
+        reparto.cheques = []
+        reparto.retenciones = []
+        
+        // Debug específico para RTO 007
+        if (reparto.idReparto && reparto.idReparto.includes('007')) {
+          console.log(`🔍 [JUMI] ============ DEBUG RTO 007 ============`)
+          console.log(`🔍 [JUMI] Reparto completo:`, reparto)
+          console.log(`🔍 [JUMI] Depósitos en el reparto:`, reparto.deposits)
+          console.log(`🔍 [JUMI] Fecha de consulta: ${fecha}`)
+        }
+
+        // Para cada depósito del reparto, usar los cheques y retenciones que ya vienen en el depósito
+        for (const deposit of reparto.deposits) {
+          const depositId = deposit.depositId || deposit.deposit_id || deposit.id || deposit.identifier
+          
+          // Debug específico para RTO 007
+          if (reparto.idReparto && reparto.idReparto.includes('007')) {
+            console.log(`🔍 [JUMI] ============ PROCESANDO DEPÓSITO RTO 007 ============`)
+            console.log(`🔍 [JUMI] Depósito:`, deposit)
+            console.log(`🔍 [JUMI] Deposit ID extraído: ${depositId}`)
+            console.log(`🔍 [JUMI] Cheques en depósito:`, deposit.cheques)
+            console.log(`🔍 [JUMI] Retenciones en depósito:`, deposit.retenciones)
+            console.log(`🔍 [JUMI] Total cheques del depósito: ${deposit.total_cheques || 0}`)
+            console.log(`🔍 [JUMI] Total retenciones del depósito: ${deposit.total_retenciones || 0}`)
+          }
+          
+          // Obtener cheques directamente del depósito (ya vienen en la respuesta principal)
+          if (deposit.cheques && Array.isArray(deposit.cheques) && deposit.cheques.length > 0) {
+            reparto.cheques.push(...deposit.cheques)
+            const montoCheques = deposit.cheques.reduce((total, cheque) => {
+              return total + parseFloat(cheque.importe || cheque.monto || 0)
+            }, 0)
+            montoTotalMovimientos += montoCheques
+            totalCheques += deposit.cheques.length
+            console.log(`💰 [JUMI] Depósito ${depositId}: ${deposit.cheques.length} cheques por $${montoCheques} (desde respuesta principal)`)
+          }
+          
+          // Obtener retenciones directamente del depósito (ya vienen en la respuesta principal)
+          if (deposit.retenciones && Array.isArray(deposit.retenciones) && deposit.retenciones.length > 0) {
+            reparto.retenciones.push(...deposit.retenciones)
+            const montoRetenciones = deposit.retenciones.reduce((total, retencion) => {
+              return total + parseFloat(retencion.importe || retencion.monto || 0)
+            }, 0)
+            montoTotalMovimientos += montoRetenciones
+            totalRetenciones += deposit.retenciones.length
+            console.log(`💰 [JUMI] Depósito ${depositId}: ${deposit.retenciones.length} retenciones por $${montoRetenciones} (desde respuesta principal)`)
+          }
+        }
+        
+        // Si hay movimientos, crear el movimiento financiero principal del reparto
+        if (totalCheques > 0 || totalRetenciones > 0) {
+          reparto.movimientoFinanciero = {
+            tipo: 'MIXTO',
+            totalCheques: totalCheques,
+            totalRetenciones: totalRetenciones,
+            montoTotal: montoTotalMovimientos,
+            cheques: reparto.cheques,
+            retenciones: reparto.retenciones
+          }
+          
+          // Sumar los movimientos al cobrado real
+          reparto.depositoReal += montoTotalMovimientos
+          
+          // Recalcular la diferencia
+          reparto.diferencia = reparto.depositoReal - reparto.depositoEsperado
+          
+          console.log(`💰 [JUMILLANO] Reparto ${reparto.idReparto}:`, {
+            cheques: totalCheques,
+            retenciones: totalRetenciones,
+            montoTotal: montoTotalMovimientos,
+            depositoRealActualizado: reparto.depositoReal,
+            nuevaDiferencia: reparto.diferencia
+          })
+        }
+      } catch (error) {
+        console.warn(`⚠️ [JUMILLANO] Error cargando movimientos para ${reparto.idReparto}:`, error)
+        // Continuar sin los movimientos si hay error
+        reparto.cheques = []
+        reparto.retenciones = []
+      }
+      
+      repartosFinales.push(reparto)
+    }
     
-    console.log('🔧 [JUMILLANO] Datos transformados:', repartos)
-    return repartos
+    console.log('🔧 [JUMILLANO] Datos transformados:', repartosFinales)
+    return repartosFinales
   },
 
   /**
@@ -383,6 +474,227 @@ export default {
   },
 
   /**
+   * Obtiene todos los cheques de un depósito específico
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise<Array>} Lista de cheques
+   */
+  async getCheques(depositId) {
+    try {
+      console.log(`📋 [JUMI] ============ OBTENIENDO CHEQUES ============`)
+      console.log(`📋 [JUMI] Depósito ID: ${depositId}`)
+      console.log(`📋 [JUMI] URL completa: ${API_BASE_URL}/deposits/${depositId}/cheques`)
+      
+      const response = await apiClient.get(`/deposits/${depositId}/cheques`)
+      
+      console.log(`✅ [JUMI] Respuesta recibida:`)
+      console.log(`📊 [JUMI] Status: ${response.status}`)
+      console.log(`📊 [JUMI] Data:`, response.data)
+      console.log(`📊 [JUMI] Cantidad de cheques: ${response.data?.length || 0}`)
+      
+      return response.data || []
+    } catch (error) {
+      console.error(`❌ [JUMI] ============ ERROR OBTENIENDO CHEQUES ============`)
+      console.error(`❌ [JUMI] Depósito ID: ${depositId}`)
+      console.error(`❌ [JUMI] URL: ${API_BASE_URL}/deposits/${depositId}/cheques`)
+      console.error(`❌ [JUMI] Status: ${error.response?.status}`)
+      console.error(`❌ [JUMI] Status Text: ${error.response?.statusText}`)
+      console.error(`❌ [JUMI] Response Data:`, error.response?.data)
+      console.error(`❌ [JUMI] Error completo:`, error)
+      
+      // Re-lanzar el error para que sea manejado por el catch específico en transformBackendDataToRepartos
+      throw error
+    }
+  },
+
+  /**
+   * Crea un nuevo cheque para un depósito
+   * @param {string} depositId - ID del depósito
+   * @param {Object} chequeData - Datos del cheque
+   * @returns {Promise<Object>} Cheque creado
+   */
+  async createCheque(depositId, chequeData) {
+    try {
+      console.log(`📤 [JUMI] Creando cheque para depósito ${depositId}:`, chequeData)
+      const response = await apiClient.post(`/deposits/${depositId}/cheques`, chequeData)
+      console.log(`✅ [JUMI] Cheque creado exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [JUMI] Error al crear cheque:`, error)
+      console.error(`❌ [JUMI] Detalles del error:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      })
+      console.error(`❌ [JUMI] Datos enviados:`, chequeData)
+      console.error(`❌ [JUMI] URL del endpoint:`, `/deposits/${depositId}/cheques`)
+      
+      // Si el backend devuelve información de validación, mostrarla
+      if (error.response?.data?.detail) {
+        console.error(`❌ [JUMI] Mensaje del backend:`, error.response.data.detail)
+      }
+      
+      throw error
+    }
+  },
+
+  /**
+   * Actualiza un cheque existente
+   * @param {string} depositId - ID del depósito
+   * @param {string} chequeId - ID del cheque
+   * @param {Object} chequeData - Datos actualizados del cheque
+   * @returns {Promise<Object>} Cheque actualizado
+   */
+  async updateCheque(depositId, chequeId, chequeData) {
+    try {
+      console.log(`📝 [JUMI] Actualizando cheque ${chequeId} del depósito ${depositId}:`, chequeData)
+      const response = await apiClient.put(`/deposits/${depositId}/cheques/${chequeId}`, chequeData)
+      console.log(`✅ [JUMI] Cheque actualizado exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [JUMI] Error al actualizar cheque:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Elimina un cheque
+   * @param {string} depositId - ID del depósito
+   * @param {string} chequeId - ID del cheque
+   * @returns {Promise<boolean>} Resultado de la eliminación
+   */
+  async deleteCheque(depositId, chequeId) {
+    try {
+      console.log(`🗑️ [JUMI] Eliminando cheque ${chequeId} del depósito ${depositId}`)
+      await apiClient.delete(`/deposits/${depositId}/cheques/${chequeId}`)
+      console.log(`✅ [JUMI] Cheque eliminado exitosamente`)
+      return true
+    } catch (error) {
+      console.error(`❌ [JUMI] Error al eliminar cheque:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtiene todas las retenciones de un depósito específico
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise<Array>} Lista de retenciones
+   */
+  async getRetenciones(depositId) {
+    try {
+      console.log(`📋 [JUMI] ============ OBTENIENDO RETENCIONES ============`)
+      console.log(`📋 [JUMI] Depósito ID: ${depositId}`)
+      console.log(`📋 [JUMI] URL completa: ${API_BASE_URL}/deposits/${depositId}/retenciones`)
+      
+      const response = await apiClient.get(`/deposits/${depositId}/retenciones`)
+      
+      console.log(`✅ [JUMI] Respuesta recibida:`)
+      console.log(`📊 [JUMI] Status: ${response.status}`)
+      console.log(`📊 [JUMI] Data:`, response.data)
+      console.log(`📊 [JUMI] Cantidad de retenciones: ${response.data?.length || 0}`)
+      
+      return response.data || []
+    } catch (error) {
+      console.error(`❌ [JUMI] ============ ERROR OBTENIENDO RETENCIONES ============`)
+      console.error(`❌ [JUMI] Depósito ID: ${depositId}`)
+      console.error(`❌ [JUMI] URL: ${API_BASE_URL}/deposits/${depositId}/retenciones`)
+      console.error(`❌ [JUMI] Status: ${error.response?.status}`)
+      console.error(`❌ [JUMI] Status Text: ${error.response?.statusText}`)
+      console.error(`❌ [JUMI] Response Data:`, error.response?.data)
+      console.error(`❌ [JUMI] Error completo:`, error)
+      
+      // Re-lanzar el error para que sea manejado por el catch específico en transformBackendDataToRepartos
+      throw error
+    }
+  },
+
+  /**
+   * Crea una nueva retención para un depósito
+   * @param {string} depositId - ID del depósito
+   * @param {Object} retencionData - Datos de la retención
+   * @returns {Promise<Object>} Retención creada
+   */
+  async createRetencion(depositId, retencionData) {
+    try {
+      console.log(`📤 [JUMI] Creando retención para depósito ${depositId}:`, retencionData)
+      const response = await apiClient.post(`/deposits/${depositId}/retenciones`, retencionData)
+      console.log(`✅ [JUMI] Retención creada exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [JUMI] Error al crear retención:`, error)
+      console.error(`❌ [JUMI] Detalles del error:`, {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      })
+      console.error(`❌ [JUMI] Datos enviados:`, retencionData)
+      console.error(`❌ [JUMI] URL del endpoint:`, `/deposits/${depositId}/retenciones`)
+      
+      // Si el backend devuelve información de validación, mostrarla
+      if (error.response?.data?.detail) {
+        console.error(`❌ [JUMI] Mensaje del backend:`, error.response.data.detail)
+      }
+      
+      throw error
+    }
+  },
+
+  /**
+   * Actualiza una retención existente
+   * @param {string} depositId - ID del depósito
+   * @param {string} retencionId - ID de la retención
+   * @param {Object} retencionData - Datos actualizados de la retención
+   * @returns {Promise<Object>} Retención actualizada
+   */
+  async updateRetencion(depositId, retencionId, retencionData) {
+    try {
+      console.log(`📝 [JUMI] Actualizando retención ${retencionId} del depósito ${depositId}:`, retencionData)
+      const response = await apiClient.put(`/deposits/${depositId}/retenciones/${retencionId}`, retencionData)
+      console.log(`✅ [JUMI] Retención actualizada exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [JUMI] Error al actualizar retención:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Elimina una retención
+   * @param {string} depositId - ID del depósito
+   * @param {string} retencionId - ID de la retención
+   * @returns {Promise<boolean>} Resultado de la eliminación
+   */
+  async deleteRetencion(depositId, retencionId) {
+    try {
+      console.log(`🗑️ [JUMI] Eliminando retención ${retencionId} del depósito ${depositId}`)
+      await apiClient.delete(`/deposits/${depositId}/retenciones/${retencionId}`)
+      console.log(`✅ [JUMI] Retención eliminada exitosamente`)
+      return true
+    } catch (error) {
+      console.error(`❌ [JUMI] Error al eliminar retención:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtiene los detalles completos de un depósito (incluye cheques y retenciones)
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise<Object>} Detalles completos del depósito
+   */
+  async getDepositDetails(depositId) {
+    try {
+      console.log(`📋 [JUMI] Obteniendo detalles completos para depósito ${depositId}`)
+      const response = await apiClient.get(`/deposits/${depositId}/details`)
+      console.log(`✅ [JUMI] Detalles obtenidos:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [JUMI] Error al obtener detalles del depósito:`, error)
+      throw error
+    }
+  },
+
+  /**
    * Actualiza un movimiento financiero de un reparto de Jumillano
    * NOTA: Por ahora el backend solo soporta POST (crear), no PUT (actualizar)
    * @param {string} idReparto - ID del reparto
@@ -397,16 +709,176 @@ export default {
   },
 
   /**
-   * Elimina un movimiento financiero de un reparto de Jumillano
-   * @param {string} idReparto - ID del reparto
+   * Elimina un cheque específico usando el nuevo endpoint simplificado
+   * @param {string} depositId - ID del depósito
+   * @param {string} numeroCheque - Número del cheque a eliminar
    * @returns {Promise} Promesa con la confirmación de eliminación
    */
-  async deleteMovimientoFinanciero(idReparto) {
+  async deleteCheque(depositId, numeroCheque) {
     try {
-      const response = await apiClient.delete(`/repartos/jumillano/${idReparto}/movimiento`)
+      console.log(`🗑️ [JUMI] ============ ELIMINANDO CHEQUE ============`)
+      console.log(`🗑️ [JUMI] Depósito ID: ${depositId}`)
+      console.log(`🗑️ [JUMI] Cheque N°: ${numeroCheque}`)
+      console.log(`🗑️ [JUMI] Base URL: ${apiClient.defaults.baseURL}`)
+      console.log(`🗑️ [JUMI] URL relativa: /deposits/${depositId}/cheques/${numeroCheque}`)
+      console.log(`🗑️ [JUMI] URL completa: ${API_BASE_URL}/deposits/${depositId}/cheques/${numeroCheque}`)
+      console.log(`🗑️ [JUMI] Método: DELETE`)
+      console.log(`🗑️ [JUMI] Headers:`, apiClient.defaults.headers)
+      
+      // Verificar parámetros antes de enviar
+      if (!depositId || !numeroCheque) {
+        throw new Error(`Parámetros faltantes - depositId: ${depositId}, numeroCheque: ${numeroCheque}`)
+      }
+      
+      const response = await apiClient.delete(`/deposits/${depositId}/cheques/${numeroCheque}`)
+      
+      console.log(`✅ [JUMI] Cheque eliminado exitosamente:`, response.data)
+      console.log(`📊 [JUMI] Status: ${response.status}`)
+      
       return response.data
     } catch (error) {
-      console.error(`Error al eliminar movimiento para reparto ${idReparto} de Jumillano:`, error)
+      console.error(`❌ [JUMI] ============ ERROR ELIMINANDO CHEQUE ============`)
+      console.error(`❌ [JUMI] Depósito ID: ${depositId}`)
+      console.error(`❌ [JUMI] Cheque N°: ${numeroCheque}`)
+      console.error(`❌ [JUMI] URL: DELETE ${API_BASE_URL}/deposits/${depositId}/cheques/${numeroCheque}`)
+      console.error(`❌ [JUMI] Status: ${error.response?.status}`)
+      console.error(`❌ [JUMI] Status Text: ${error.response?.statusText}`)
+      console.error(`❌ [JUMI] Response Data:`, error.response?.data)
+      
+      // Si el backend devuelve información de error, mostrarla detalladamente
+      if (error.response?.data?.detail) {
+        console.error(`❌ [JUMI] Detalles del error del backend:`)
+        if (Array.isArray(error.response.data.detail)) {
+          error.response.data.detail.forEach((detail, index) => {
+            console.error(`❌ [JUMI] Error ${index + 1}:`, detail)
+            // Mostrar específicamente el campo que falta
+            if (detail.loc && Array.isArray(detail.loc)) {
+              console.error(`❌ [JUMI] Campo faltante: '${detail.loc.join('.')}'`)
+            }
+            if (detail.type === 'missing') {
+              console.error(`❌ [JUMI] ⚠️  CAMPO REQUERIDO FALTANTE ⚠️`)
+            }
+          })
+        } else {
+          console.error(`❌ [JUMI] Mensaje del backend:`, error.response.data.detail)
+        }
+      }
+      
+      console.error(`❌ [JUMI] Error completo:`, error)
+      
+      throw error
+    }
+  },
+
+  /**
+   * Elimina una retención específica usando el nuevo endpoint simplificado
+   * @param {string} depositId - ID del depósito
+   * @param {string} numeroRetencion - Número de la retención a eliminar
+   * @returns {Promise} Promesa con la confirmación de eliminación
+   */
+  async deleteRetencion(depositId, numeroRetencion) {
+    try {
+      console.log(`🗑️ [JUMI] ============ ELIMINANDO RETENCIÓN ============`)
+      console.log(`🗑️ [JUMI] Depósito ID: ${depositId}`)
+      console.log(`🗑️ [JUMI] Retención N°: ${numeroRetencion}`)
+      console.log(`🗑️ [JUMI] Base URL: ${apiClient.defaults.baseURL}`)
+      console.log(`🗑️ [JUMI] URL relativa: /deposits/${depositId}/retenciones/${numeroRetencion}`)
+      console.log(`🗑️ [JUMI] URL completa: ${API_BASE_URL}/deposits/${depositId}/retenciones/${numeroRetencion}`)
+      console.log(`🗑️ [JUMI] Método: DELETE`)
+      console.log(`🗑️ [JUMI] Headers:`, apiClient.defaults.headers)
+      
+      // Verificar parámetros antes de enviar
+      if (!depositId || !numeroRetencion) {
+        throw new Error(`Parámetros faltantes - depositId: ${depositId}, numeroRetencion: ${numeroRetencion}`)
+      }
+      
+      const response = await apiClient.delete(`/deposits/${depositId}/retenciones/${numeroRetencion}`)
+      
+      console.log(`✅ [JUMI] Retención eliminada exitosamente:`, response.data)
+      console.log(`📊 [JUMI] Status: ${response.status}`)
+      
+      return response.data
+    } catch (error) {
+      console.error(`❌ [JUMI] ============ ERROR ELIMINANDO RETENCIÓN ============`)
+      console.error(`❌ [JUMI] Depósito ID: ${depositId}`)
+      console.error(`❌ [JUMI] Retención N°: ${numeroRetencion}`)
+      console.error(`❌ [JUMI] URL: DELETE ${API_BASE_URL}/deposits/${depositId}/retenciones/${numeroRetencion}`)
+      console.error(`❌ [JUMI] Status: ${error.response?.status}`)
+      console.error(`❌ [JUMI] Status Text: ${error.response?.statusText}`)
+      console.error(`❌ [JUMI] Response Data:`, error.response?.data)
+      
+      // Si el backend devuelve información de error, mostrarla detalladamente
+      if (error.response?.data?.detail) {
+        console.error(`❌ [JUMI] Detalles del error del backend:`)
+        if (Array.isArray(error.response.data.detail)) {
+          error.response.data.detail.forEach((detail, index) => {
+            console.error(`❌ [JUMI] Error ${index + 1}:`, detail)
+            // Mostrar específicamente el campo que falta
+            if (detail.loc && Array.isArray(detail.loc)) {
+              console.error(`❌ [JUMI] Campo faltante: '${detail.loc.join('.')}'`)
+            }
+            if (detail.type === 'missing') {
+              console.error(`❌ [JUMI] ⚠️  CAMPO REQUERIDO FALTANTE ⚠️`)
+            }
+          })
+        } else {
+          console.error(`❌ [JUMI] Mensaje del backend:`, error.response.data.detail)
+        }
+      }
+      
+      console.error(`❌ [JUMI] Error completo:`, error)
+      
+      throw error
+    }
+  },
+
+  /**
+   * Elimina un movimiento financiero usando el endpoint original (DEPRECATED - usar deleteCheque o deleteRetencion)
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise} Promesa con la confirmación de eliminación
+   */
+  async deleteMovimientoFinanciero(depositId) {
+    try {
+      console.log(`🗑️ [JUMI] ============ ELIMINANDO TODOS LOS MOVIMIENTOS ============`)
+      console.log(`🗑️ [JUMI] Depósito ID: ${depositId}`)
+      console.log(`🗑️ [JUMI] URL: DELETE ${API_BASE_URL}/deposits/${depositId}/movimiento`)
+      
+      // Petición DELETE simple sin payload - el backend elimina todos los movimientos del depósito
+      const response = await apiClient.delete(`/deposits/${depositId}/movimiento`)
+      
+      console.log(`✅ [JUMI] Todos los movimientos eliminados exitosamente:`, response.data)
+      console.log(`📊 [JUMI] Status: ${response.status}`)
+      
+      return response.data
+    } catch (error) {
+      console.error(`❌ [JUMI] ============ ERROR ELIMINANDO MOVIMIENTO ============`)
+      console.error(`❌ [JUMI] Depósito ID: ${depositId}`)
+      console.error(`❌ [JUMI] URL: DELETE ${API_BASE_URL}/deposits/${depositId}/movimiento`)
+      console.error(`❌ [JUMI] Status: ${error.response?.status}`)
+      console.error(`❌ [JUMI] Status Text: ${error.response?.statusText}`)
+      console.error(`❌ [JUMI] Response Data:`, error.response?.data)
+      
+      // Si el backend devuelve información de error, mostrarla detalladamente
+      if (error.response?.data?.detail) {
+        console.error(`❌ [JUMI] Detalles del error del backend:`)
+        if (Array.isArray(error.response.data.detail)) {
+          error.response.data.detail.forEach((detail, index) => {
+            console.error(`❌ [JUMI] Error ${index + 1}:`, detail)
+            // Mostrar específicamente el campo que falta
+            if (detail.loc && Array.isArray(detail.loc)) {
+              console.error(`❌ [JUMI] Campo faltante: '${detail.loc.join('.')}'`)
+            }
+            if (detail.type === 'missing') {
+              console.error(`❌ [JUMI] ⚠️  CAMPO REQUERIDO FALTANTE ⚠️`)
+            }
+          })
+        } else {
+          console.error(`❌ [JUMI] Mensaje del backend:`, error.response.data.detail)
+        }
+      }
+      
+      console.error(`❌ [JUMI] Error completo:`, error)
+      
       throw error
     }
   },

@@ -283,7 +283,8 @@
             :class="{ 'animate-row': true }"
             :style="{ animationDelay: `${index * 50}ms` }"
             @edit="$emit('edit', $event)"
-            @delete-movement="$emit('delete-movement', $event)"
+            @delete-movement="handleDeleteMovement"
+            @view-movements="handleViewMovements"
             @toggle-comprobantes="handleToggleComprobantes"
             @estado-actualizado="handleEstadoActualizado"
           />
@@ -404,12 +405,24 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de vista detallada de movimientos -->
+    <MovimientosDetailModal
+      :isVisible="showMovimientosModal"
+      :reparto="selectedReparto"
+      @close="closeMovimientosModal"
+      @edit="handleEditFromModal"
+      @create="handleCreateFromModal"
+      @delete-movement="handleDeleteMovement"
+      @delete-all-movements="handleDeleteAllMovements"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
 import RepartoRow from './RepartoRow.vue'
+import MovimientosDetailModal from './MovimientosDetailModal.vue'
 
 const props = defineProps({
   repartos: {
@@ -426,7 +439,11 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['refresh', 'edit', 'delete-movement', 'toggle-comprobantes', 'estado-actualizado'])
+const emit = defineEmits(['refresh', 'edit', 'delete-movement', 'delete-all-movements', 'toggle-comprobantes', 'estado-actualizado'])
+
+// Estados para el modal de movimientos
+const showMovimientosModal = ref(false)
+const selectedReparto = ref(null)
 
 // Función para manejar toggle de comprobantes
 const handleToggleComprobantes = (event) => {
@@ -440,6 +457,115 @@ const handleEstadoActualizado = (event) => {
   console.log('🔄 RepartoTable - Estado actualizado:', event)
   emit('estado-actualizado', event)
   console.log('🔄 RepartoTable - Evento de estado enviado a padre')
+}
+
+// Funciones para el modal de movimientos
+const handleViewMovements = (reparto) => {
+  console.log('👁️ RepartoTable - Ver movimientos para reparto:', reparto.idReparto)
+  selectedReparto.value = reparto
+  showMovimientosModal.value = true
+}
+
+const closeMovimientosModal = () => {
+  showMovimientosModal.value = false
+  selectedReparto.value = null
+}
+
+const handleEditFromModal = (reparto) => {
+  console.log('✏️ RepartoTable - Editar desde modal:', reparto.idReparto)
+  closeMovimientosModal()
+  emit('edit', reparto)
+}
+
+const handleCreateFromModal = (reparto) => {
+  console.log('➕ RepartoTable - Crear desde modal:', reparto.idReparto)
+  closeMovimientosModal()
+  emit('edit', reparto) // Reutilizar el mismo evento para crear
+}
+
+// Función para manejar eliminación de movimiento individual
+const handleDeleteMovement = async (eventData) => {
+  console.log('🗑️ [RepartoTable] Eliminando movimiento individual:', eventData)
+  
+  try {
+    // Verificar que venga el depositId del RepartoRow
+    if (!eventData.depositId) {
+      // Si no viene, intentar obtenerlo como fallback
+      const depositId = getDepositId(eventData.reparto)
+      if (!depositId) {
+        throw new Error('No se pudo obtener el deposit_id del reparto')
+      }
+      eventData.depositId = depositId
+    }
+    
+    console.log(`🗑️ [RepartoTable] Usando deposit_id: ${eventData.depositId}`)
+    
+    // Emitir evento al componente padre con el depositId correcto
+    emit('delete-movement', eventData)
+    
+  } catch (error) {
+    console.error('❌ [RepartoTable] Error al preparar eliminación de movimiento:', error)
+    alert(`Error al eliminar movimiento: ${error.message}`)
+  }
+}
+
+// Función para manejar eliminación de todos los movimientos
+const handleDeleteAllMovements = async (reparto) => {
+  console.log('🗑️ [RepartoTable] Eliminando todos los movimientos:', reparto?.idReparto)
+  
+  try {
+    // Obtener el deposit_id del reparto
+    const depositId = getDepositId(reparto)
+    
+    if (!depositId) {
+      throw new Error('No se pudo obtener el deposit_id del reparto')
+    }
+    
+    console.log(`🗑️ [RepartoTable] Usando deposit_id: ${depositId}`)
+    
+    // Llamar al servicio para eliminar todos los movimientos
+    emit('delete-all-movements', {
+      reparto,
+      depositId
+    })
+    
+    // Cerrar el modal después de la eliminación
+    closeMovimientosModal()
+    
+  } catch (error) {
+    console.error('❌ [RepartoTable] Error al preparar eliminación de todos los movimientos:', error)
+    alert(`Error al eliminar movimientos: ${error.message}`)
+  }
+}
+
+// Función helper para obtener deposit_id (misma lógica que RepartoRow)
+const getDepositId = (reparto) => {
+  if (!reparto) {
+    console.warn('❌ [RepartoTable] Reparto no definido para obtener deposit_id')
+    return null
+  }
+  
+  // CASO 1: El objeto ES directamente un depósito (estructura real de la API)
+  if (reparto.deposit_id) {
+    console.log(`✅ [RepartoTable] Usando deposit_id: ${reparto.deposit_id}`)
+    return reparto.deposit_id
+  }
+  
+  // CASO 2: Estructura anidada - usar deposits[0].deposit_id si existe
+  if (reparto.deposits && reparto.deposits.length > 0 && reparto.deposits[0].deposit_id) {
+    console.log(`✅ [RepartoTable] Usando deposits[0].deposit_id: ${reparto.deposits[0].deposit_id}`)
+    return reparto.deposits[0].deposit_id
+  }
+  
+  // CASO 3: Fallback - usar deposits[0].id si existe
+  if (reparto.deposits && reparto.deposits.length > 0 && reparto.deposits[0].id) {
+    console.log(`⚠️ [RepartoTable] Fallback deposits[0].id: ${reparto.deposits[0].id}`)
+    return reparto.deposits[0].id
+  }
+  
+  // CASO 4: Fallback final - usar el ID del reparto
+  console.warn(`❌ [RepartoTable] Fallback reparto.id: ${reparto.id} - Puede fallar`)
+  return reparto.id
 }
 
 // Estados para filtros

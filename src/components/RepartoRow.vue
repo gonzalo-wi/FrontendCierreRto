@@ -85,7 +85,11 @@
     <!-- Movimiento Financiero con diseño mejorado -->
     <td class="px-2 py-1.5 whitespace-nowrap">
       <div class="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-2 border border-gray-200 group-hover:border-blue-200 transition-all duration-300">
-        <MovimientoFinanciero :movimiento="reparto.movimientoFinanciero" />
+        <MovimientoFinanciero 
+          :movimiento="reparto.movimientoFinanciero" 
+          :reparto="reparto" 
+          @delete-movement="(eventData) => $emit('delete-movement', eventData)"
+        />
       </div>
     </td>
 
@@ -127,6 +131,18 @@
     <td class="px-2 py-1.5 whitespace-nowrap text-center">
       <!-- Botones para cuando existe movimiento financiero -->
       <div v-if="reparto.movimientoFinanciero" class="flex justify-center space-x-1">
+        <!-- Botón Ver Movimientos -->
+        <button 
+          @click="$emit('view-movements', reparto)"
+          class="group relative inline-flex items-center justify-center w-7 h-7 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+          title="Ver todos los movimientos en detalle"
+        >
+          <svg class="w-4 h-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+          </svg>
+        </button>
+        
         <!-- Botón Editar Premium -->
         <button 
           @click="$emit('edit', reparto)"
@@ -140,9 +156,9 @@
         
         <!-- Botón Eliminar Premium -->
         <button 
-          @click="$emit('delete-movement', reparto)"
+          @click="handleDeleteMovement"
           class="group relative inline-flex items-center justify-center w-7 h-7 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
-          title="Eliminar movimiento"
+          title="Eliminar todos los movimientos financieros"
         >
           <svg class="w-4 h-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -151,13 +167,26 @@
       </div>
       
       <!-- Botón para crear movimiento cuando no existe movimiento financiero -->
-      <div v-else class="flex justify-center">
+      <div v-else class="flex justify-center space-x-1">
+        <!-- Botón Ver/Crear Movimientos -->
+        <button 
+          @click="$emit('view-movements', reparto)"
+          class="group relative inline-flex items-center px-2 py-1.5 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-xs font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+          title="Ver detalles del reparto y crear movimientos"
+        >
+          <svg class="w-3 h-3 mr-1 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+          </svg>
+          <span class="font-semibold">Ver Detalles</span>
+        </button>
+        
         <button 
           @click="$emit('edit', reparto)"
-          class="group relative inline-flex items-center px-3 py-2 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+          class="group relative inline-flex items-center px-2 py-1.5 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
           title="Crear movimiento"
         >
-          <svg class="w-4 h-4 mr-1 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <svg class="w-3 h-3 mr-1 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
           <span class="font-semibold">Crear</span>
@@ -193,7 +222,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['edit', 'delete-movement', 'toggle-comprobantes', 'estado-actualizado'])
+const emit = defineEmits(['edit', 'delete-movement', 'view-movements', 'toggle-comprobantes', 'estado-actualizado'])
 
 // Composable para comprobantes
 const { 
@@ -492,6 +521,28 @@ const getRelativeDate = (date) => {
     console.error('❌ [FECHA_RELATIVA] Error procesando fecha:', { date, error: error.message })
     return 'Fecha inválida'
   }
+}
+
+// Función para manejar eliminación de movimientos con deposit_id correcto
+const handleDeleteMovement = () => {
+  console.log('🗑️ [RepartoRow] Manejando eliminación de movimiento para:', props.reparto.idReparto)
+  
+  // Obtener el deposit_id usando la misma lógica que otros métodos
+  const depositId = getDepositId(props.reparto)
+  
+  if (!depositId) {
+    console.error('❌ [RepartoRow] No se pudo obtener deposit_id para eliminar movimiento')
+    alert('Error: No se pudo identificar el depósito para eliminar el movimiento.')
+    return
+  }
+  
+  console.log(`🗑️ [RepartoRow] Emitiendo evento delete-movement con deposit_id: ${depositId}`)
+  
+  // Emitir evento con toda la información necesaria
+  emit('delete-movement', {
+    reparto: props.reparto,
+    depositId: depositId
+  })
 }
 
 // Tooltip dinámico para comprobantes

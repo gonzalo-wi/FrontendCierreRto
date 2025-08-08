@@ -236,8 +236,8 @@ export default {
       repartosPorNumero[repartoKey].deposits.push(depositInfo)
     })
     
-    // Convertir a array y calcular estados finales
-    Object.values(repartosPorNumero).forEach(reparto => {
+    // Convertir a array y procesar cada reparto para cargar movimientos financieros
+    for (const reparto of Object.values(repartosPorNumero)) {
       // Determinar el estado final del reparto basado en todos sus depósitos
       const estadosDepositos = reparto.deposits.map(d => d.estado)
       const tieneDiferencias = reparto.deposits.some(d => d.tiene_diferencia)
@@ -253,14 +253,74 @@ export default {
       } else {
         reparto.estado = 'PENDIENTE'
       }
+
+      try {
+        // Cargar movimientos financieros de los datos que ya vienen en cada depósito (nueva estructura del backend)
+        let totalCheques = 0
+        let totalRetenciones = 0
+        let movimientosCargados = []
+
+        for (const deposit of reparto.deposits) {
+          const depositId = deposit.deposit_id || deposit.id || deposit.identifier
+
+          console.log(`🔍 [NAFA] Procesando movimientos para depósito ${depositId}:`, {
+            cheques: deposit.cheques?.length || 0,
+            retenciones: deposit.retenciones?.length || 0,
+            total_cheques: deposit.total_cheques || 0,
+            total_retenciones: deposit.total_retenciones || 0
+          })
+
+          // Obtener cheques directamente del depósito (ya vienen en la respuesta principal)
+          if (deposit.cheques && Array.isArray(deposit.cheques) && deposit.cheques.length > 0) {
+            const montoCheques = deposit.cheques.reduce((sum, cheque) => sum + parseFloat(cheque.importe || cheque.monto || 0), 0)
+            totalCheques += montoCheques
+            movimientosCargados.push(...deposit.cheques)
+            console.log(`💰 [NAFA] Depósito ${depositId}: ${deposit.cheques.length} cheques por $${montoCheques} (desde respuesta principal)`)
+          }
+
+          // Obtener retenciones directamente del depósito (ya vienen en la respuesta principal)
+          if (deposit.retenciones && Array.isArray(deposit.retenciones) && deposit.retenciones.length > 0) {
+            const montoRetenciones = deposit.retenciones.reduce((sum, retencion) => sum + parseFloat(retencion.importe || retencion.monto || 0), 0)
+            totalRetenciones += montoRetenciones
+            movimientosCargados.push(...deposit.retenciones)
+            console.log(`💰 [NAFA] Depósito ${depositId}: ${deposit.retenciones.length} retenciones por $${montoRetenciones} (desde respuesta principal)`)
+          }
+        }
+
+        // Actualizar el monto real sumando los movimientos
+        const montoOriginal = reparto.depositoReal
+        reparto.depositoReal = montoOriginal + totalCheques + totalRetenciones
+
+        // Recalcular diferencia con el nuevo monto
+        reparto.diferencia = reparto.depositoReal - reparto.depositoEsperado
+
+        // Actualizar estado con información de movimientos
+        if (totalCheques > 0 || totalRetenciones > 0) {
+          reparto.estado = Math.abs(reparto.diferencia) < 0.01 ? 'EXACTO' : 
+                          reparto.diferencia > 0 ? 'SOBRANTE' : 'FALTANTE'
+        }
+
+        // Agregar información de movimientos al reparto
+        reparto.movimientos = {
+          cheques: totalCheques,
+          retenciones: totalRetenciones,
+          total: totalCheques + totalRetenciones,
+          count: movimientosCargados.length
+        }
+
+        console.log(`✅ [NAFA] ${reparto.idReparto}: Original $${montoOriginal} + Movimientos $${totalCheques + totalRetenciones} = Final $${reparto.depositoReal} (Estado: ${reparto.estado})`)
+
+      } catch (error) {
+        console.error(`❌ [NAFA] Error procesando movimientos para ${reparto.idReparto}:`, error)
+      }
       
       // Agregar descripción formateada de la composición
       reparto.composicionEsperadoDescripcion = this._formatearComposicion(reparto.composicionEsperado)
       
       repartos.push(reparto)
-    })
+    }
     
-    console.log('🔧 [NAFA] Datos transformados:', repartos)
+    console.log(`� [NAFA] Procesados ${repartos.length} repartos con movimientos financieros cargados`)
     return repartos
   },
 
@@ -518,6 +578,167 @@ export default {
       return response.data
     } catch (error) {
       console.error(`❌ [NAFA] Error al crear movimiento financiero:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtiene todos los cheques de un depósito específico
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise<Array>} Lista de cheques
+   */
+  async getCheques(depositId) {
+    try {
+      console.log(`📋 [NAFA] Obteniendo cheques para depósito ${depositId}`)
+      const response = await apiClient.get(`/deposits/${depositId}/cheques`)
+      console.log(`✅ [NAFA] Cheques obtenidos:`, response.data)
+      return response.data || []
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al obtener cheques:`, error)
+      return []
+    }
+  },
+
+  /**
+   * Crea un nuevo cheque para un depósito
+   * @param {string} depositId - ID del depósito
+   * @param {Object} chequeData - Datos del cheque
+   * @returns {Promise<Object>} Cheque creado
+   */
+  async createCheque(depositId, chequeData) {
+    try {
+      console.log(`📤 [NAFA] Creando cheque para depósito ${depositId}:`, chequeData)
+      const response = await apiClient.post(`/deposits/${depositId}/cheques`, chequeData)
+      console.log(`✅ [NAFA] Cheque creado exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al crear cheque:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Actualiza un cheque existente
+   * @param {string} depositId - ID del depósito
+   * @param {string} chequeId - ID del cheque
+   * @param {Object} chequeData - Datos actualizados del cheque
+   * @returns {Promise<Object>} Cheque actualizado
+   */
+  async updateCheque(depositId, chequeId, chequeData) {
+    try {
+      console.log(`📝 [NAFA] Actualizando cheque ${chequeId} del depósito ${depositId}:`, chequeData)
+      const response = await apiClient.put(`/deposits/${depositId}/cheques/${chequeId}`, chequeData)
+      console.log(`✅ [NAFA] Cheque actualizado exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al actualizar cheque:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Elimina un cheque
+   * @param {string} depositId - ID del depósito
+   * @param {string} chequeId - ID del cheque
+   * @returns {Promise<boolean>} Resultado de la eliminación
+   */
+  async deleteCheque(depositId, chequeId) {
+    try {
+      console.log(`🗑️ [NAFA] Eliminando cheque ${chequeId} del depósito ${depositId}`)
+      await apiClient.delete(`/deposits/${depositId}/cheques/${chequeId}`)
+      console.log(`✅ [NAFA] Cheque eliminado exitosamente`)
+      return true
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al eliminar cheque:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtiene todas las retenciones de un depósito específico
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise<Array>} Lista de retenciones
+   */
+  async getRetenciones(depositId) {
+    try {
+      console.log(`📋 [NAFA] Obteniendo retenciones para depósito ${depositId}`)
+      const response = await apiClient.get(`/deposits/${depositId}/retenciones`)
+      console.log(`✅ [NAFA] Retenciones obtenidas:`, response.data)
+      return response.data || []
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al obtener retenciones:`, error)
+      return []
+    }
+  },
+
+  /**
+   * Crea una nueva retención para un depósito
+   * @param {string} depositId - ID del depósito
+   * @param {Object} retencionData - Datos de la retención
+   * @returns {Promise<Object>} Retención creada
+   */
+  async createRetencion(depositId, retencionData) {
+    try {
+      console.log(`📤 [NAFA] Creando retención para depósito ${depositId}:`, retencionData)
+      const response = await apiClient.post(`/deposits/${depositId}/retenciones`, retencionData)
+      console.log(`✅ [NAFA] Retención creada exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al crear retención:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Actualiza una retención existente
+   * @param {string} depositId - ID del depósito
+   * @param {string} retencionId - ID de la retención
+   * @param {Object} retencionData - Datos actualizados de la retención
+   * @returns {Promise<Object>} Retención actualizada
+   */
+  async updateRetencion(depositId, retencionId, retencionData) {
+    try {
+      console.log(`📝 [NAFA] Actualizando retención ${retencionId} del depósito ${depositId}:`, retencionData)
+      const response = await apiClient.put(`/deposits/${depositId}/retenciones/${retencionId}`, retencionData)
+      console.log(`✅ [NAFA] Retención actualizada exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al actualizar retención:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Elimina una retención
+   * @param {string} depositId - ID del depósito
+   * @param {string} retencionId - ID de la retención
+   * @returns {Promise<boolean>} Resultado de la eliminación
+   */
+  async deleteRetencion(depositId, retencionId) {
+    try {
+      console.log(`🗑️ [NAFA] Eliminando retención ${retencionId} del depósito ${depositId}`)
+      await apiClient.delete(`/deposits/${depositId}/retenciones/${retencionId}`)
+      console.log(`✅ [NAFA] Retención eliminada exitosamente`)
+      return true
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al eliminar retención:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtiene los detalles completos de un depósito (incluye cheques y retenciones)
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise<Object>} Detalles completos del depósito
+   */
+  async getDepositDetails(depositId) {
+    try {
+      console.log(`📋 [NAFA] Obteniendo detalles completos para depósito ${depositId}`)
+      const response = await apiClient.get(`/deposits/${depositId}/details`)
+      console.log(`✅ [NAFA] Detalles obtenidos:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [NAFA] Error al obtener detalles del depósito:`, error)
       throw error
     }
   },

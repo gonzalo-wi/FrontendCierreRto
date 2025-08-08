@@ -129,7 +129,11 @@
     <!-- Movimiento Financiero con diseño mejorado -->
     <td class="px-4 lg:px-6 py-4 whitespace-nowrap">
       <div class="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-3 border border-gray-200 group-hover:border-blue-200 transition-all duration-300">
-        <MovimientoFinanciero :movimiento="reparto.movimientoFinanciero" />
+        <MovimientoFinanciero 
+          :movimiento="reparto.movimientoFinanciero" 
+          :reparto="reparto" 
+          @delete-movement="(eventData) => $emit('delete-movement', eventData)"
+        />
       </div>
     </td>
 

@@ -170,6 +170,8 @@
           @refresh="fetchRepartos"
           @edit="openEditModal"
           @delete-movement="deleteMovement"
+          @delete-all-movements="deleteAllMovements"
+          @view-movements="openMovimientosModal"
           @toggle-comprobantes="handleToggleComprobantes"
           @estado-actualizado="handleEstadoActualizado"
         />
@@ -244,6 +246,16 @@
         @close="closeModal"
         @save="saveMovement"
       />
+
+      <!-- Modal de Movimientos Financieros -->
+      <MovimientosFinancierosModal
+        :is-visible="showMovimientosModal"
+        :reparto="selectedRepartoMovimientos"
+        :service="currentService"
+        @close="closeMovimientosModal"
+        @updated="onMovimientosUpdated"
+        @delete-movement="deleteMovement"
+      />
     </div>
 
     <!-- Modal de Comprobantes -->
@@ -269,6 +281,7 @@ import { useAuth } from '../composables/useAuth.js'
 import RepartoTable from '../components/RepartoTable.vue'
 import ComprobantesModal from '../components/ComprobantesModal.vue'
 import EditMovementModal from '../components/EditMovementModal.vue'
+import MovimientosFinancierosModal from '../components/MovimientosFinancierosModal.vue'
 import DateSelector from '../components/DateSelector.vue'
 import TotalsView from '../components/TotalsView.vue'
 import ProcessProgressModal from '../components/ProcessProgressModal.vue'
@@ -307,6 +320,10 @@ const modalMovimientoTipo = ref(null) // cheque | retencion | null
 const showComprobantesModal = ref(false)
 const selectedRepartoComprobantes = ref(null)
 
+// Estados para modal de movimientos financieros
+const showMovimientosModal = ref(false)
+const selectedRepartoMovimientos = ref(null)
+
 // Estado del progreso
 const progressState = ref({
   showModal: false,
@@ -340,6 +357,9 @@ const userPermissions = computed(() => {
 
 // Verificar si puede gestionar repartos
 const canProcessRepartos = computed(() => canManageRepartos())
+
+// Servicio actual (para pasar al modal de movimientos financieros)
+const currentService = computed(() => props.service)
 
 // Propiedades computadas para estadísticas
 const exactCount = computed(() => {
@@ -724,6 +744,13 @@ const handleToggleComprobantes = (event) => {
   showComprobantesModal.value = true
 }
 
+// Función para abrir modal de movimientos financieros
+const openMovimientosModal = (reparto) => {
+  console.log('💰 Abriendo modal de movimientos financieros para:', reparto?.idReparto)
+  selectedRepartoMovimientos.value = reparto
+  showMovimientosModal.value = true
+}
+
 // Función para manejar actualización de estado de repartos
 const handleEstadoActualizado = (event) => {
   console.log('🔄 Estado de reparto actualizado:', event)
@@ -745,6 +772,17 @@ const closeComprobantesModal = () => {
   selectedRepartoComprobantes.value = null
 }
 
+const closeMovimientosModal = () => {
+  showMovimientosModal.value = false
+  selectedRepartoMovimientos.value = null
+}
+
+const onMovimientosUpdated = () => {
+  // Recargar los repartos para mostrar los cambios
+  console.log('📈 Movimientos financieros actualizados, recargando datos...')
+  fetchRepartos()
+}
+
 // Función para guardar el movimiento
 const saveMovement = async (movementData) => {
   console.log('🚀 [REPARTO_VIEW] ============ SAVE MOVEMENT INICIADO ============')
@@ -760,52 +798,87 @@ const saveMovement = async (movementData) => {
   console.log('🚀 [REPARTO_VIEW] saving.value establecido a true')
   
   try {
-    let updatedMovimiento
-    
     // Guardar referencia al reparto antes de que se limpie en closeModal
     const repartoActual = selectedReparto.value
     console.log('🚀 [REPARTO_VIEW] repartoActual:', repartoActual)
+    
+    // Obtener el primer depósito del reparto para asociar el movimiento
+    const primerDeposito = repartoActual.deposits?.[0]
+    if (!primerDeposito) {
+      throw new Error(`No se encontró depósito para el reparto ${repartoActual.idReparto}`)
+    }
+    
+    const depositId = primerDeposito.deposit_id || primerDeposito.id || primerDeposito.identifier
+    if (!depositId) {
+      throw new Error(`No se pudo obtener ID del depósito para el reparto ${repartoActual.idReparto}`)
+    }
+    
+    console.log('🔍 [REPARTO_VIEW] Usando depósito:', depositId)
     
     // En modo desarrollo, simular guardado
     if (config.DEV_MODE) {
       console.log('🔧 [REPARTO_VIEW] Modo desarrollo: simulando guardado de movimiento para', repartoActual.idReparto)
       await new Promise(resolve => setTimeout(resolve, 1000))
-      updatedMovimiento = { ...movementData, id: Date.now() }
     } else {
-      console.log('🌐 [REPARTO_VIEW] Modo producción: enviando al a Aguas real')
+      console.log('🌐 [REPARTO_VIEW] Modo producción: creando movimiento específico')
+      console.log('🔍 [REPARTO_VIEW] movementData completo:', movementData)
       
-      // Por ahora, siempre crear nuevos movimientos (no actualizar)
-      // TODO: Implementar lógica de actualización cuando el backend lo soporte
-      console.log('➕ [REPARTO_VIEW] Creando movimiento financiero')
-      updatedMovimiento = await props.service.createMovimientoFinanciero(
-        repartoActual.idReparto, 
-        movementData
-      )
-    }
-    
-    // Actualizar la lista local
-    const index = repartos.value.findIndex(r => r.idReparto === repartoActual.idReparto)
-    if (index !== -1) {
-      repartos.value[index] = {
-        ...repartos.value[index],
-        movimientoFinanciero: updatedMovimiento
+      // Crear cheque o retención según la estructura que viene del modal
+      if (movementData.cheques && Array.isArray(movementData.cheques) && movementData.cheques.length > 0) {
+        console.log('➕ [REPARTO_VIEW] Creando cheque(s) desde modal')
+        
+        for (const cheque of movementData.cheques) {
+          // Estructura simplificada que espera el backend
+          const chequeData = {
+            numero: cheque.nro_cheque,           // REQUERIDO - string
+            banco: cheque.banco,                 // REQUERIDO - string  
+            importe: parseFloat(cheque.importe), // REQUERIDO - number
+            fecha_cobro: cheque.fecha            // OPCIONAL - string
+          }
+          console.log('📄 [REPARTO_VIEW] Creando cheque con estructura del backend:', chequeData)
+          await props.service.createCheque(depositId, chequeData)
+        }
+      } else if (movementData.retenciones && Array.isArray(movementData.retenciones) && movementData.retenciones.length > 0) {
+        console.log('➕ [REPARTO_VIEW] Creando retención(es) desde modal')
+        
+        for (const retencion of movementData.retenciones) {
+          // Estructura simplificada que espera el backend
+          const retencionData = {
+            tipo: retencion.concepto || "GANANCIAS",      // REQUERIDO - string
+            numero: retencion.nro_retencion,              // REQUERIDO - string
+            importe: parseFloat(retencion.importe),       // REQUERIDO - number
+            concepto: retencion.concepto || "RIB"         // OPCIONAL - string
+          }
+          console.log('⚠️ [REPARTO_VIEW] Creando retención con estructura del backend:', retencionData)
+          await props.service.createRetencion(depositId, retencionData)
+        }
+      } else {
+        throw new Error(`Estructura de movimiento no válida: ${JSON.stringify(movementData)}`)
       }
     }
 
     // Cerrar modal y mostrar mensaje de éxito
     closeModal()
     
-    // Mostrar notificación de éxito más profesional
-    const tipoMovimiento = movementData.tipo_concepto === 'RIB' ? 'Retención' : 'Cheque'
-    console.log(`✅ ${tipoMovimiento} guardado correctamente para reparto ${repartoActual.idReparto}`)
+    // Recargar los datos para mostrar los nuevos movimientos
+    console.log('🔄 [REPARTO_VIEW] Recargando datos después de crear movimiento...')
+    await fetchRepartos()
+    
+    // Mostrar notificación de éxito
+    const tipoMovimiento = movementData.cheques && movementData.cheques.length > 0 ? 'Cheque(s)' :
+                          movementData.retenciones && movementData.retenciones.length > 0 ? 'Retención(es)' :
+                          'Movimiento'
+    const cantidad = movementData.cheques?.length || movementData.retenciones?.length || 1
+    console.log(`✅ ${cantidad} ${tipoMovimiento} guardado(s) correctamente para reparto ${repartoActual.idReparto}`)
     
   } catch (err) {
-    console.error('Error al guardar movimiento financiero:', err)
+    console.error('❌ [REPARTO_VIEW] Error al guardar movimiento financiero:', err)
     
     // En modo desarrollo, mostrar error más amigable
     if (config.DEV_MODE) {
       console.log('⚠️ Error simulado en modo desarrollo, pero se procede normalmente')
       closeModal()
+      await fetchRepartos() // Recargar datos incluso en modo dev
     } else {
       alert('Error al guardar el movimiento financiero: ' + (err.message || 'Error de conexión'))
     }
@@ -814,46 +887,270 @@ const saveMovement = async (movementData) => {
   }
 }
 
-// Función para eliminar un movimiento financiero
-const deleteMovement = async (reparto) => {
-  if (!reparto || !reparto.movimientoFinanciero) return
+// Función para eliminar un movimiento financiero individual o todos
+const deleteMovement = async (eventData) => {
+  console.log('🗑️ [RepartoView] ============ ELIMINANDO MOVIMIENTO ============')
+  console.log('🗑️ [RepartoView] ⚠️  FUNCIÓN deleteMovement EJECUTADA - EVENTO RECIBIDO')
+  console.log('🗑️ [RepartoView] eventData completo:', JSON.stringify(eventData, null, 2))
+  console.log('🗑️ [RepartoView] typeof eventData:', typeof eventData)
   
-  // Confirmar eliminación
-  const tipoMovimiento = reparto.movimientoFinanciero.tipo === 'RETENCION' ? 'retención' : 'cheque'
-  const confirmed = confirm(`¿Estás seguro de que quieres eliminar el movimiento de ${tipoMovimiento} del reparto ${reparto.idReparto}?`)
+  // DEBUGGING: Verificar origen del evento
+  const stackTrace = new Error().stack
+  console.log('🗑️ [RepartoView] Stack trace:', stackTrace)
   
-  if (!confirmed) return
+  // Verificar si es eliminación de TODOS los movimientos (desde RepartoRow)
+  const isBulkDelete = eventData?.depositId && !eventData?.tipo && !eventData?.movimiento
+  
+  if (isBulkDelete) {
+    console.log('🗑️ [RepartoView] ============ ELIMINACIÓN MASIVA DETECTADA ============')
+    console.log('🗑️ [RepartoView] Redirigiendo a deleteAllMovements...')
+    return await deleteAllMovements(eventData)
+  }
+  
+  // Continuamos con eliminación individual
+  console.log('🗑️ [RepartoView] ============ ELIMINACIÓN INDIVIDUAL ============')
+  console.log('🗑️ [RepartoView] eventData.tipo existe:', 'tipo' in eventData)
+  console.log('🗑️ [RepartoView] eventData.tipo valor:', eventData?.tipo)
+  console.log('🗑️ [RepartoView] eventData.movimiento existe:', 'movimiento' in eventData)
+  console.log('🗑️ [RepartoView] eventData.movimiento:', JSON.stringify(eventData?.movimiento, null, 2))
+  console.log('🗑️ [RepartoView] eventData.reparto?.idReparto:', eventData?.reparto?.idReparto)
+  
+  // Verificación exhaustiva de las propiedades del evento
+  if (eventData && typeof eventData === 'object') {
+    console.log('🔍 [RepartoView] ============ PROPIEDADES DEL EVENTO ============')
+    Object.keys(eventData).forEach(key => {
+      console.log(`🔍 [RepartoView]   - ${key}: ${JSON.stringify(eventData[key])} (${typeof eventData[key]})`)
+    })
+  }
   
   try {
-    // En modo desarrollo, simular eliminación
-    if (config.DEV_MODE) {
-      console.log('Modo desarrollo: simulando eliminación de movimiento para', reparto.idReparto)
-      await new Promise(resolve => setTimeout(resolve, 800))
-    } else {
-      // Eliminar del backend
-      await props.service.deleteMovimientoFinanciero(reparto.idReparto)
-    }
+    let result
     
-    // Actualizar la lista local
-    const index = repartos.value.findIndex(r => r.idReparto === reparto.idReparto)
-    if (index !== -1) {
-      repartos.value[index] = {
-        ...repartos.value[index],
-        movimientoFinanciero: null
+    if (config.DEV_MODE) {
+      console.log('🔧 [RepartoView] Modo desarrollo: simulando eliminación de movimiento')
+      await new Promise(resolve => setTimeout(resolve, 800))
+      result = { success: true }
+    } else {
+      // Extraer datos del evento con validación más estricta
+      let tipo = eventData?.tipo
+      let movimiento = eventData?.movimiento
+      let reparto = eventData?.reparto
+      
+      console.log('🔍 [RepartoView] ============ ANALIZANDO DATOS EXTRAÍDOS ============')
+      console.log('🔍 [RepartoView] tipo extraído:', tipo, '(tipo:', typeof tipo, ')')
+      console.log('🔍 [RepartoView] movimiento extraído:', JSON.stringify(movimiento, null, 2))
+      console.log('🔍 [RepartoView] reparto?.idReparto:', reparto?.idReparto)
+      
+      // Si no hay tipo, intentar inferirlo del movimiento
+      if (!tipo) {
+        console.warn('⚠️ [RepartoView] Tipo no especificado, intentando inferir del movimiento...')
+        if (movimiento) {
+          // Si tiene nro_cheque o numero y es tipo cheque
+          if (movimiento.nro_cheque || (movimiento.numero && !movimiento.nro_retencion)) {
+            tipo = 'cheque'
+            console.log('🔍 [RepartoView] ✅ Tipo inferido: cheque')
+          }
+          // Si tiene nro_retencion o es claramente una retención
+          else if (movimiento.nro_retencion || movimiento.concepto) {
+            tipo = 'retencion'
+            console.log('🔍 [RepartoView] ✅ Tipo inferido: retencion')
+          }
+        } else {
+          console.error('❌ [RepartoView] No hay movimiento para inferir el tipo')
+        }
+      }
+      
+      // Validar que tenemos los datos mínimos
+      if (!tipo) {
+        throw new Error('Tipo de movimiento no especificado y no se pudo inferir del objeto movimiento. Para eliminación individual se requiere tipo y movimiento específico.')
+      }
+      
+      if (!movimiento) {
+        throw new Error('Datos del movimiento no proporcionados. Para eliminación individual se requiere el objeto movimiento específico.')
+      }
+      
+      // Obtener deposit_id
+      let depositId = null
+      
+      // CASO 1: Si el reparto viene en el evento, usarlo
+      if (reparto) {
+        depositId = getDepositId(reparto)
+      }
+      
+      // CASO 2: Si no viene reparto, buscar en selectedRepartoMovimientos (modal)
+      if (!depositId && selectedRepartoMovimientos.value) {
+        console.log('🔍 [RepartoView] Usando reparto del modal selectedRepartoMovimientos')
+        depositId = getDepositId(selectedRepartoMovimientos.value)
+      }
+      
+      // CASO 3: Buscar en la lista de repartos por algún identificador del movimiento
+      if (!depositId && movimiento && repartos.value.length > 0) {
+        console.log('🔍 [RepartoView] Buscando reparto en la lista por movimiento')
+        
+        // Buscar reparto que contenga este movimiento
+        for (const r of repartos.value) {
+          const cheques = r.cheques || r.movimientoFinanciero?.cheques || []
+          const retenciones = r.retenciones || r.movimientoFinanciero?.retenciones || []
+          
+          const encontrado = [...cheques, ...retenciones].some(m => {
+            return (m.nro_cheque === movimiento.nro_cheque && movimiento.nro_cheque) ||
+                   (m.nro_retencion === movimiento.nro_retencion && movimiento.nro_retencion) ||
+                   (m.id === movimiento.id && movimiento.id)
+          })
+          
+          if (encontrado) {
+            console.log(`✅ [RepartoView] Reparto encontrado: ${r.idReparto}`)
+            depositId = getDepositId(r)
+            break
+          }
+        }
+      }
+      
+      console.log('🔍 [RepartoView] depositId final obtenido:', depositId)
+      
+      if (!depositId) {
+        throw new Error('No se pudo obtener el deposit_id para realizar la eliminación')
+      }
+      
+      // Logging detallado del objeto movimiento
+      console.log('🔍 [RepartoView] ============ INSPECCIONANDO MOVIMIENTO ============')
+      console.log('🔍 [RepartoView] Propiedades del movimiento:')
+      if (movimiento) {
+        Object.keys(movimiento).forEach(key => {
+          console.log(`🔍 [RepartoView]   - ${key}: ${movimiento[key]} (${typeof movimiento[key]})`)
+        })
+      }
+      
+      // Obtener el identificador específico según el tipo
+      let identificador = null
+      if (tipo === 'cheque') {
+        identificador = movimiento.nro_cheque || movimiento.numero
+        console.log('💰 [RepartoView] ============ PROCESANDO CHEQUE ============')
+        console.log('💰 [RepartoView] movimiento.nro_cheque:', movimiento.nro_cheque)
+        console.log('💰 [RepartoView] movimiento.numero:', movimiento.numero)
+        console.log('💰 [RepartoView] identificador final:', identificador)
+        
+        if (!identificador) {
+          console.error('❌ [RepartoView] El cheque no tiene número identificador')
+          console.error('❌ [RepartoView] Objeto cheque completo:', JSON.stringify(movimiento, null, 2))
+          throw new Error('El cheque no tiene número identificador (nro_cheque o numero)')
+        }
+        console.log(`🗑️ [RepartoView] ✅ Eliminando cheque N° ${identificador} para deposit_id: ${depositId}`)
+        console.log(`🌐 [RepartoView] ✅ HACIENDO: DELETE /deposits/${depositId}/cheques/${identificador}`)
+        result = await props.service.deleteCheque(depositId, identificador)
+        
+      } else if (tipo === 'retencion') {
+        identificador = movimiento.nro_retencion || movimiento.numero
+        console.log('⚠️ [RepartoView] ============ PROCESANDO RETENCION ============')
+        console.log('⚠️ [RepartoView] movimiento.nro_retencion:', movimiento.nro_retencion)
+        console.log('⚠️ [RepartoView] movimiento.numero:', movimiento.numero)
+        console.log('⚠️ [RepartoView] identificador final:', identificador)
+        
+        if (!identificador) {
+          console.error('❌ [RepartoView] La retención no tiene número identificador')
+          console.error('❌ [RepartoView] Objeto retención completo:', JSON.stringify(movimiento, null, 2))
+          throw new Error('La retención no tiene número identificador (nro_retencion o numero)')
+        }
+        console.log(`🗑️ [RepartoView] ✅ Eliminando retención N° ${identificador} para deposit_id: ${depositId}`)
+        console.log(`🌐 [RepartoView] ✅ HACIENDO: DELETE /deposits/${depositId}/retenciones/${identificador}`)
+        result = await props.service.deleteRetencion(depositId, identificador)
+        
+      } else {
+        console.error('❌ [RepartoView] Tipo de movimiento no soportado:', tipo)
+        throw new Error(`Tipo de movimiento no soportado: ${tipo}. Debe ser 'cheque' o 'retencion'`)
       }
     }
-
-    console.log(`✅ Movimiento financiero eliminado para reparto ${reparto.idReparto}`)
     
-  } catch (err) {
-    console.error('Error al eliminar movimiento financiero:', err)
+    if (result) {
+      console.log('✅ [RepartoView] Movimiento eliminado exitosamente')
+      // Refrescar los datos
+      await fetchRepartos()
+      
+      // Mostrar mensaje de éxito
+      const tipoTexto = eventData.tipo === 'cheque' ? 'cheque' : 'retención'
+      const numero = eventData.movimiento?.nro_cheque || eventData.movimiento?.nro_retencion || eventData.movimiento?.numero || 'S/N'
+      alert(`${tipoTexto.charAt(0).toUpperCase() + tipoTexto.slice(1)} N° ${numero} eliminado exitosamente`)
+    }
+    
+  } catch (error) {
+    console.error('❌ [RepartoView] Error al eliminar movimiento:', error)
+    
+    // Mensaje de error más específico
+    let errorMessage = 'Error desconocido'
+    if (error.response?.status === 404) {
+      errorMessage = 'El movimiento no fue encontrado en el servidor'
+    } else if (error.response?.status === 422) {
+      errorMessage = 'Datos incorrectos para la eliminación'
+    } else if (error.response?.status === 400) {
+      errorMessage = 'Solicitud inválida - revisa los datos del movimiento'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    alert(`Error al eliminar movimiento: ${errorMessage}`)
+  }
+}
+
+// Función para eliminar todos los movimientos de un reparto
+const deleteAllMovements = async (eventData) => {
+  console.log('🗑️ [RepartoView] Eliminando todos los movimientos:', eventData)
+  
+  try {
+    let result
     
     if (config.DEV_MODE) {
-      console.log('⚠️ Error simulado en modo desarrollo, pero se procede normalmente')
+      console.log('🔧 [RepartoView] Modo desarrollo: simulando eliminación de todos los movimientos')
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      result = { success: true }
     } else {
-      alert('Error al eliminar el movimiento financiero: ' + (err.message || 'Error de conexión'))
+      // Llamar al servicio real con el deposit_id
+      console.log(`🗑️ [RepartoView] Eliminando todos los movimientos para deposit_id: ${eventData.depositId}`)
+      result = await props.service.deleteMovimientoFinanciero(eventData.depositId)
     }
+    
+    if (result) {
+      console.log('✅ [RepartoView] Todos los movimientos eliminados exitosamente')
+      // Refrescar los datos
+      await fetchRepartos()
+      
+      // Mostrar mensaje de éxito
+      alert(`Todos los movimientos eliminados exitosamente del reparto ${eventData.reparto?.idReparto}`)
+    }
+    
+  } catch (error) {
+    console.error('❌ [RepartoView] Error al eliminar todos los movimientos:', error)
+    alert(`Error al eliminar movimientos: ${error.message || 'Error desconocido'}`)
   }
+}
+
+// Función para obtener el deposit_id del reparto (misma lógica que otros componentes)
+const getDepositId = (reparto) => {
+  if (!reparto) {
+    console.warn('❌ [RepartoView] Reparto no definido para obtener deposit_id')
+    return null
+  }
+  
+  // CASO 1: El objeto ES directamente un depósito (estructura real de la API)
+  if (reparto.deposit_id) {
+    console.log(`✅ [RepartoView] Usando deposit_id: ${reparto.deposit_id}`)
+    return reparto.deposit_id
+  }
+  
+  // CASO 2: Estructura anidada - usar deposits[0].deposit_id si existe
+  if (reparto.deposits && reparto.deposits.length > 0 && reparto.deposits[0].deposit_id) {
+    console.log(`✅ [RepartoView] Usando deposits[0].deposit_id: ${reparto.deposits[0].deposit_id}`)
+    return reparto.deposits[0].deposit_id
+  }
+  
+  // CASO 3: Fallback - usar deposits[0].id si existe
+  if (reparto.deposits && reparto.deposits.length > 0 && reparto.deposits[0].id) {
+    console.log(`⚠️ [RepartoView] Fallback deposits[0].id: ${reparto.deposits[0].id}`)
+    return reparto.deposits[0].id
+  }
+  
+  // CASO 4: Fallback final - usar el ID del reparto
+  console.warn(`❌ [RepartoView] Fallback reparto.id: ${reparto.id} - Puede fallar`)
+  return reparto.id
 }
 
 // Método para manejar el cambio de fecha desde el DateSelector

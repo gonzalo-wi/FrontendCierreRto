@@ -268,31 +268,88 @@ export default {
       repartosPorNumero[repartoKey].deposits.push(depositInfo)
     })
     
-    // Convertir a array y calcular estados finales
-    Object.values(repartosPorNumero).forEach(reparto => {
-      // Determinar el estado final del reparto basado en todos sus depósitos
-      const estadosDepositos = reparto.deposits.map(d => d.estado)
-      const tieneDiferencias = reparto.deposits.some(d => d.tiene_diferencia)
-      
-      // Lógica para determinar el estado del reparto
-      if (estadosDepositos.every(estado => estado === 'LISTO')) {
-        reparto.estado = 'LISTO'
-      } else if (estadosDepositos.some(estado => estado === 'ENVIADO')) {
-        reparto.estado = 'ENVIADO'
-      } else if (tieneDiferencias) {
-        reparto.estado = reparto.diferencia === 0 ? 'EXACTO' : 
-                        reparto.diferencia > 0 ? 'SOBRANTE' : 'FALTANTE'
-      } else {
-        reparto.estado = 'PENDIENTE'
+    // Convertir a array y procesar cada reparto para cargar movimientos financieros
+    for (const reparto of Object.values(repartosPorNumero)) {
+      try {
+        // Cargar movimientos financieros de los datos que ya vienen en cada depósito (nueva estructura del backend)
+        let totalCheques = 0
+        let totalRetenciones = 0
+        let movimientosCargados = []
+
+        for (const deposit of reparto.deposits) {
+          const depositId = deposit.deposit_id || deposit.id || deposit.identifier
+
+          console.log(`🔍 [LA PLATA] Procesando movimientos para depósito ${depositId}:`, {
+            cheques: deposit.cheques?.length || 0,
+            retenciones: deposit.retenciones?.length || 0,
+            total_cheques: deposit.total_cheques || 0,
+            total_retenciones: deposit.total_retenciones || 0
+          })
+
+          // Obtener cheques directamente del depósito (ya vienen en la respuesta principal)
+          if (deposit.cheques && Array.isArray(deposit.cheques) && deposit.cheques.length > 0) {
+            const montoCheques = deposit.cheques.reduce((sum, cheque) => sum + parseFloat(cheque.importe || cheque.monto || 0), 0)
+            totalCheques += montoCheques
+            movimientosCargados.push(...deposit.cheques)
+            console.log(`💰 [LA PLATA] Depósito ${depositId}: ${deposit.cheques.length} cheques por $${montoCheques} (desde respuesta principal)`)
+          }
+
+          // Obtener retenciones directamente del depósito (ya vienen en la respuesta principal)
+          if (deposit.retenciones && Array.isArray(deposit.retenciones) && deposit.retenciones.length > 0) {
+            const montoRetenciones = deposit.retenciones.reduce((sum, retencion) => sum + parseFloat(retencion.importe || retencion.monto || 0), 0)
+            totalRetenciones += montoRetenciones
+            movimientosCargados.push(...deposit.retenciones)
+            console.log(`💰 [LA PLATA] Depósito ${depositId}: ${deposit.retenciones.length} retenciones por $${montoRetenciones} (desde respuesta principal)`)
+          }
+        }
+
+        // Actualizar el monto real sumando los movimientos
+        const montoOriginal = reparto.depositoReal
+        reparto.depositoReal = montoOriginal + totalCheques + totalRetenciones
+
+        // Recalcular diferencia con el nuevo monto
+        reparto.diferencia = reparto.depositoReal - reparto.depositoEsperado
+
+        // Determinar el estado final del reparto
+        const estadosDepositos = reparto.deposits.map(d => d.estado)
+        const tieneDiferencias = reparto.deposits.some(d => d.tiene_diferencia)
+        
+        // Lógica mejorada para determinar el estado del reparto
+        if (totalCheques > 0 || totalRetenciones > 0) {
+          reparto.estado = Math.abs(reparto.diferencia) < 0.01 ? 'EXACTO' : 
+                          reparto.diferencia > 0 ? 'SOBRANTE' : 'FALTANTE'
+        } else if (estadosDepositos.every(estado => estado === 'LISTO')) {
+          reparto.estado = 'LISTO'
+        } else if (estadosDepositos.some(estado => estado === 'ENVIADO')) {
+          reparto.estado = 'ENVIADO'
+        } else if (tieneDiferencias) {
+          reparto.estado = reparto.diferencia === 0 ? 'EXACTO' : 
+                          reparto.diferencia > 0 ? 'SOBRANTE' : 'FALTANTE'
+        } else {
+          reparto.estado = 'PENDIENTE'
+        }
+        
+        // Agregar descripción formateada de la composición
+        reparto.composicionEsperadoDescripcion = this._formatearComposicion(reparto.composicionEsperado)
+
+        // Agregar información de movimientos al reparto
+        reparto.movimientos = {
+          cheques: totalCheques,
+          retenciones: totalRetenciones,
+          total: totalCheques + totalRetenciones,
+          count: movimientosCargados.length
+        }
+
+        console.log(`✅ [LA PLATA] ${reparto.idReparto}: Original $${montoOriginal} + Movimientos $${totalCheques + totalRetenciones} = Final $${reparto.depositoReal} (Estado: ${reparto.estado})`)
+
+      } catch (error) {
+        console.error(`❌ [LA PLATA] Error procesando movimientos para ${reparto.idReparto}:`, error)
       }
       
-      // Agregar descripción formateada de la composición
-      reparto.composicionEsperadoDescripcion = this._formatearComposicion(reparto.composicionEsperado)
-      
       repartos.push(reparto)
-    })
+    }
     
-    console.log('🔧 [LA PLATA] Datos transformados:', repartos)
+    console.log(`📊 [LA PLATA] Procesados ${repartos.length} repartos con movimientos financieros cargados`)
     return repartos
   },
 
@@ -626,6 +683,167 @@ export default {
       return response.data
     } catch (error) {
       console.error(`❌ [LA PLATA] Error al crear movimiento financiero:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtiene todos los cheques de un depósito específico
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise<Array>} Lista de cheques
+   */
+  async getCheques(depositId) {
+    try {
+      console.log(`📋 [LA PLATA] Obteniendo cheques para depósito ${depositId}`)
+      const response = await apiClient.get(`/deposits/${depositId}/cheques`)
+      console.log(`✅ [LA PLATA] Cheques obtenidos:`, response.data)
+      return response.data || []
+    } catch (error) {
+      console.error(`❌ [LA PLATA] Error al obtener cheques:`, error)
+      return []
+    }
+  },
+
+  /**
+   * Crea un nuevo cheque para un depósito
+   * @param {string} depositId - ID del depósito
+   * @param {Object} chequeData - Datos del cheque
+   * @returns {Promise<Object>} Cheque creado
+   */
+  async createCheque(depositId, chequeData) {
+    try {
+      console.log(`📤 [LA PLATA] Creando cheque para depósito ${depositId}:`, chequeData)
+      const response = await apiClient.post(`/deposits/${depositId}/cheques`, chequeData)
+      console.log(`✅ [LA PLATA] Cheque creado exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [LA PLATA] Error al crear cheque:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Actualiza un cheque existente
+   * @param {string} depositId - ID del depósito
+   * @param {string} chequeId - ID del cheque
+   * @param {Object} chequeData - Datos actualizados del cheque
+   * @returns {Promise<Object>} Cheque actualizado
+   */
+  async updateCheque(depositId, chequeId, chequeData) {
+    try {
+      console.log(`📝 [LA PLATA] Actualizando cheque ${chequeId} del depósito ${depositId}:`, chequeData)
+      const response = await apiClient.put(`/deposits/${depositId}/cheques/${chequeId}`, chequeData)
+      console.log(`✅ [LA PLATA] Cheque actualizado exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [LA PLATA] Error al actualizar cheque:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Elimina un cheque
+   * @param {string} depositId - ID del depósito
+   * @param {string} chequeId - ID del cheque
+   * @returns {Promise<boolean>} Resultado de la eliminación
+   */
+  async deleteCheque(depositId, chequeId) {
+    try {
+      console.log(`🗑️ [LA PLATA] Eliminando cheque ${chequeId} del depósito ${depositId}`)
+      await apiClient.delete(`/deposits/${depositId}/cheques/${chequeId}`)
+      console.log(`✅ [LA PLATA] Cheque eliminado exitosamente`)
+      return true
+    } catch (error) {
+      console.error(`❌ [LA PLATA] Error al eliminar cheque:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtiene todas las retenciones de un depósito específico
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise<Array>} Lista de retenciones
+   */
+  async getRetenciones(depositId) {
+    try {
+      console.log(`📋 [LA PLATA] Obteniendo retenciones para depósito ${depositId}`)
+      const response = await apiClient.get(`/deposits/${depositId}/retenciones`)
+      console.log(`✅ [LA PLATA] Retenciones obtenidas:`, response.data)
+      return response.data || []
+    } catch (error) {
+      console.error(`❌ [LA PLATA] Error al obtener retenciones:`, error)
+      return []
+    }
+  },
+
+  /**
+   * Crea una nueva retención para un depósito
+   * @param {string} depositId - ID del depósito
+   * @param {Object} retencionData - Datos de la retención
+   * @returns {Promise<Object>} Retención creada
+   */
+  async createRetencion(depositId, retencionData) {
+    try {
+      console.log(`📤 [LA PLATA] Creando retención para depósito ${depositId}:`, retencionData)
+      const response = await apiClient.post(`/deposits/${depositId}/retenciones`, retencionData)
+      console.log(`✅ [LA PLATA] Retención creada exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [LA PLATA] Error al crear retención:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Actualiza una retención existente
+   * @param {string} depositId - ID del depósito
+   * @param {string} retencionId - ID de la retención
+   * @param {Object} retencionData - Datos actualizados de la retención
+   * @returns {Promise<Object>} Retención actualizada
+   */
+  async updateRetencion(depositId, retencionId, retencionData) {
+    try {
+      console.log(`📝 [LA PLATA] Actualizando retención ${retencionId} del depósito ${depositId}:`, retencionData)
+      const response = await apiClient.put(`/deposits/${depositId}/retenciones/${retencionId}`, retencionData)
+      console.log(`✅ [LA PLATA] Retención actualizada exitosamente:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [LA PLATA] Error al actualizar retención:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Elimina una retención
+   * @param {string} depositId - ID del depósito
+   * @param {string} retencionId - ID de la retención
+   * @returns {Promise<boolean>} Resultado de la eliminación
+   */
+  async deleteRetencion(depositId, retencionId) {
+    try {
+      console.log(`🗑️ [LA PLATA] Eliminando retención ${retencionId} del depósito ${depositId}`)
+      await apiClient.delete(`/deposits/${depositId}/retenciones/${retencionId}`)
+      console.log(`✅ [LA PLATA] Retención eliminada exitosamente`)
+      return true
+    } catch (error) {
+      console.error(`❌ [LA PLATA] Error al eliminar retención:`, error)
+      throw error
+    }
+  },
+
+  /**
+   * Obtiene los detalles completos de un depósito (incluye cheques y retenciones)
+   * @param {string} depositId - ID del depósito
+   * @returns {Promise<Object>} Detalles completos del depósito
+   */
+  async getDepositDetails(depositId) {
+    try {
+      console.log(`📋 [LA PLATA] Obteniendo detalles completos para depósito ${depositId}`)
+      const response = await apiClient.get(`/deposits/${depositId}/details`)
+      console.log(`✅ [LA PLATA] Detalles obtenidos:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ [LA PLATA] Error al obtener detalles del depósito:`, error)
       throw error
     }
   },

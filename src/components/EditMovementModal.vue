@@ -522,7 +522,11 @@ const props = defineProps({
   movimientoTipo: {
     type: String,
     default: null,
-    validator: (value) => !value || ['cheque', 'retencion'].includes(value)
+    validator: (value) => !value || ['CHEQUE', 'RETENCION', 'cheque', 'retencion'].includes(value)
+  },
+  movimientoData: {
+    type: Object,
+    default: null
   }
 })
 
@@ -655,56 +659,41 @@ const eliminarRetencion = (index) => {
 watch(() => formData.value.tipo, (newVal) => validateField('tipo', newVal))
 
 // Llenar formulario cuando se abre el modal
-watch(() => props.reparto, (newReparto) => {
-  if (newReparto && newReparto.movimientoFinanciero) {
+watch(() => props.movimientoData, (newData) => {
+  if (newData) {
     // Editando un movimiento existente
-    const mov = newReparto.movimientoFinanciero
+    console.log('🔄 Cargando datos existentes:', newData)
     
-    // Inicializar con arrays vacíos
     formData.value = {
-      tipo: mov.tipo || '',
+      tipo: newData.tipo || '',
       cheques: [],
       retenciones: []
     }
     
-    // Cargar datos existentes según el tipo
-    if (mov.tipo === 'CHEQUE') {
-      // Si es un movimiento antiguo (campos individuales), convertir a array
-      if (mov.banco || mov.nro_cheque) {
-        formData.value.cheques = [{
-          nrocta: mov.nrocta || '',
-          concepto: mov.concepto || '',
-          banco: mov.banco || '',
-          sucursal: mov.sucursal || '',
-          localidad: mov.localidad || '',
-          nro_cheque: mov.nro_cheque || '',
-          nro_cuenta: mov.nro_cuenta || '',
-          titular: mov.titular || '',
-          fecha: mov.fecha || '',
-          importe: mov.importe || 0
-        }]
-      } else if (mov.cheques && Array.isArray(mov.cheques)) {
-        // Si ya es un array, usarlo directamente
-        formData.value.cheques = [...mov.cheques]
-      }
-    } else if (mov.tipo === 'RETENCION') {
-      // Si es un movimiento antiguo (campos individuales), convertir a array
-      if (mov.nro_retencion) {
-        formData.value.retenciones = [{
-          nrocta: mov.nrocta || '',
-          concepto: mov.concepto || '',
-          nro_retencion: mov.nro_retencion || '',
-          fecha: mov.fecha || '',
-          importe: mov.importe || 0
-        }]
-      } else if (mov.retenciones && Array.isArray(mov.retenciones)) {
-        // Si ya es un array, usarlo directamente
-        formData.value.retenciones = [...mov.retenciones]
-      }
+    if (newData.tipo === 'CHEQUE') {
+      formData.value.cheques = [{
+        nrocta: newData.nrocta || '',
+        concepto: newData.concepto || '',
+        banco: newData.banco || '',
+        sucursal: newData.sucursal || '',
+        localidad: newData.localidad || '',
+        nro_cheque: newData.nro_cheque || '',
+        nro_cuenta: newData.nro_cuenta || '',
+        titular: newData.titular || '',
+        fecha: newData.fecha || '',
+        importe: newData.importe || 0
+      }]
+    } else if (newData.tipo === 'RETENCION') {
+      formData.value.retenciones = [{
+        nrocta: newData.nrocta || '',
+        concepto: newData.concepto || '',
+        nro_retencion: newData.nro_retencion || '',
+        fecha: newData.fecha || '',
+        importe: newData.importe || 0
+      }]
     }
-  } else if (newReparto) {
+  } else if (props.reparto && !props.movimientoData) {
     // Creando un nuevo movimiento
-    const diferencia = Math.abs(newReparto.depositoReal - newReparto.depositoEsperado)
     formData.value = {
       tipo: '',
       cheques: [],
@@ -718,10 +707,10 @@ watch(() => props.reparto, (newReparto) => {
 // Watcher para movimientoTipo - aplicar tipo inicial
 watch(() => props.movimientoTipo, (nuevoTipo) => {
   console.log('🎯 MovimientoTipo recibido:', nuevoTipo)
-  if (nuevoTipo && props.reparto && !props.reparto.movimientoFinanciero) {
+  if (nuevoTipo && props.reparto && !props.movimientoData) {
     // Solo aplicar si estamos creando un nuevo movimiento (no editando)
-    const tipoFinal = nuevoTipo === 'cheque' ? 'CHEQUE' : nuevoTipo === 'retencion' ? 'RETENCION' : ''
-    if (tipoFinal) {
+    const tipoFinal = nuevoTipo.toUpperCase()
+    if (['CHEQUE', 'RETENCION'].includes(tipoFinal)) {
       console.log('🎯 Aplicando tipo inicial:', tipoFinal)
       formData.value.tipo = tipoFinal
       
@@ -740,26 +729,48 @@ watch(() => props.movimientoTipo, (nuevoTipo) => {
 }, { immediate: true })
 
 // Funciones auxiliares para crear elementos vacíos
-const crearChequeVacio = () => ({
-  nrocta: '',
-  concepto: '',
-  banco: '',
-  sucursal: '',
-  localidad: '',
-  nro_cheque: '',
-  nro_cuenta: '',
-  titular: '',
-  fecha: new Date().toISOString().split('T')[0],
-  importe: 0
-})
+const crearChequeVacio = () => {
+  // Intentar obtener nrocta del reparto o de sus depósitos
+  let nrocta = ''
+  if (props.reparto) {
+    // Intentar obtener de diferentes ubicaciones en el reparto
+    nrocta = props.reparto.nrocta || 
+            (props.reparto.deposits && props.reparto.deposits[0] && props.reparto.deposits[0].nrocta) ||
+            ''
+  }
+  
+  return {
+    nrocta: nrocta,
+    concepto: '',
+    banco: '',
+    sucursal: '',
+    localidad: '',
+    nro_cheque: '',
+    nro_cuenta: '',
+    titular: '',
+    fecha: new Date().toISOString().split('T')[0],
+    importe: 0
+  }
+}
 
-const crearRetencionVacia = () => ({
-  nrocta: '',
-  concepto: '',
-  nro_retencion: '',
-  fecha: new Date().toISOString().split('T')[0],
-  importe: 0
-})
+const crearRetencionVacia = () => {
+  // Intentar obtener nrocta del reparto o de sus depósitos
+  let nrocta = ''
+  if (props.reparto) {
+    // Intentar obtener de diferentes ubicaciones en el reparto
+    nrocta = props.reparto.nrocta || 
+            (props.reparto.deposits && props.reparto.deposits[0] && props.reparto.deposits[0].nrocta) ||
+            ''
+  }
+  
+  return {
+    nrocta: nrocta,
+    concepto: '',
+    nro_retencion: '',
+    fecha: new Date().toISOString().split('T')[0],
+    importe: 0
+  }
+}
 
 const handleSubmit = () => {
   console.log('🚀 [MODAL] ============ INICIANDO SUBMIT ============')
