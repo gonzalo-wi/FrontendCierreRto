@@ -18,9 +18,9 @@
           leave-from-class="transform scale-100 opacity-100"
           leave-to-class="transform scale-95 opacity-0"
         >
-          <div v-if="isVisible" class="relative bg-white rounded-2xl shadow-2xl border border-gray-200/50 w-full max-w-lg mx-auto">
+          <div v-if="isVisible" class="relative bg-white rounded-2xl shadow-2xl border border-gray-200/50 w-full max-w-4xl mx-auto max-h-[90vh] flex flex-col">
             <!-- Header mejorado con gradiente -->
-            <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-2xl">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 rounded-t-2xl flex-shrink-0">
               <div class="flex justify-between items-center">
                 <div class="flex items-center space-x-3">
                   <div class="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
@@ -30,9 +30,9 @@
                   </div>
                   <div>
                     <h3 class="text-xl font-bold text-white">
-                      Movimiento Financiero
+                      {{ formData.tipo ? (formData.tipo === 'CHEQUE' ? 'Nuevo Cheque' : 'Nueva Retención') : 'Movimiento Financiero' }}
                     </h3>
-                    <p class="text-blue-100 text-sm">Editar detalles del movimiento</p>
+                    <p class="text-blue-100 text-sm">Completa todos los campos requeridos</p>
                   </div>
                 </div>
                 <button 
@@ -46,24 +46,24 @@
               </div>
             </div>
 
-            <div class="p-6">
-              <!-- Información del reparto mejorada -->
-              <div class="bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-xl mb-6 border border-gray-200/50">
-                <div class="flex items-center space-x-3 mb-3">
-                  <div class="bg-blue-100 p-2 rounded-lg">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
+            <div class="flex-1 overflow-y-auto p-6">
+              <!-- Información del reparto compacta -->
+              <div class="bg-gradient-to-r from-gray-50 to-blue-50 p-3 rounded-xl mb-4 border border-gray-200/50">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-3">
+                    <div class="bg-blue-100 p-2 rounded-lg">
+                      <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <span class="font-semibold text-gray-800 text-sm">{{ reparto?.idReparto }}</span>
+                      <span class="text-xs text-gray-600 ml-2">{{ formatDate(reparto?.fechaReparto) }}</span>
+                    </div>
                   </div>
-                  <div>
-                    <h4 class="font-bold text-gray-900 text-lg">{{ reparto?.idReparto }}</h4>
-                    <p class="text-sm text-gray-600">{{ formatDate(reparto?.fechaReparto) }}</p>
-                  </div>
-                </div>
-                <div class="bg-white p-3 rounded-lg border border-gray-200/50">
-                  <div class="flex justify-between items-center">
-                    <span class="text-sm font-medium text-gray-600">Diferencia:</span>
-                    <span :class="getDifferenceClass(reparto)" class="font-bold text-lg">
+                  <div class="text-right">
+                    <span class="text-xs text-gray-600">Diferencia:</span>
+                    <span :class="getDifferenceClass(reparto)" class="font-bold text-sm ml-1">
                       {{ formatCurrency(reparto ? reparto.depositoReal - reparto.depositoEsperado : 0) }}
                     </span>
                   </div>
@@ -71,7 +71,7 @@
               </div>
 
               <!-- Formulario mejorado -->
-              <form @submit.prevent="handleSubmit" class="space-y-5">
+              <form @submit.prevent="handleSubmit" class="space-y-4">
                 <!-- Tipo de movimiento con icono -->
                 <div class="form-group">
                   <label class="form-label">
@@ -91,69 +91,111 @@
                     <option value="RETENCION">⚠️ RETENCIÓN</option>
                     <option value="CHEQUE">📄 CHEQUE</option>
                   </select>
-                  <p v-if="errors.tipo" class="error-message">{{ errors.tipo }}</p>                </div>
+                  <p v-if="errors.tipo" class="error-message">{{ errors.tipo }}</p>
+                </div>
 
                 <!-- Sección para múltiples cheques -->
-              <div v-if="formData.tipo === 'CHEQUE'" class="mt-8">
-                <h4 class="font-semibold text-gray-900 text-lg mb-4">Detalles del Cheque</h4>
-                <div v-for="(cheque, index) in formData.cheques" :key="index" class="bg-white p-4 rounded-xl shadow-sm mb-4 border border-gray-200">
-                  <div class="flex justify-between items-center mb-4">
-                    <h5 class="font-semibold text-gray-800">Cheque {{ index + 1 }}</h5>
+              <div v-if="formData.tipo === 'CHEQUE'" class="mt-6">
+                <h4 class="font-semibold text-gray-900 text-lg mb-3 flex items-center">
+                  <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                  </svg>
+                  Cheques
+                  <button 
+                    @click.prevent="agregarCheque" 
+                    class="ml-auto bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center"
+                  >
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Agregar
+                  </button>
+                </h4>
+                
+                <div v-for="(cheque, index) in formData.cheques" :key="index" class="bg-white p-4 rounded-xl shadow-sm mb-3 border border-gray-200">
+                  <div class="flex justify-between items-center mb-3">
+                    <span class="font-semibold text-gray-800 text-sm">Cheque #{{ index + 1 }}</span>
                     <button 
+                      v-if="formData.cheques.length > 1"
                       @click="eliminarCheque(index)" 
-                      class="text-red-600 hover:text-red-500 transition-all duration-200"
+                      class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
                     >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                       </svg>
                     </button>
                   </div>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  <!-- Grid compacto de 3 columnas -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     <!-- Número de cuenta -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                         </svg>
-                        Número de Cliente
+                        N° Cliente
                       </label>
                       <input 
                         v-model="cheque.nrocta" 
                         type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.nrocta }"
-                        placeholder="Ej: 1234567890"
+                        placeholder="1234567890"
                       >
-                      <p v-if="errors.nrocta" class="error-message">{{ errors.nrocta }}</p>
+                      <p v-if="errors.nrocta" class="error-message text-xs">{{ errors.nrocta }}</p>
                     </div>
 
                     <!-- Concepto -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                         Concepto
                       </label>
-                      <input 
+                      <select
                         v-model="cheque.concepto" 
-                        type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.concepto }"
-                        placeholder="Descripción del movimiento"
                       >
-                      <p v-if="errors.concepto" class="error-message">{{ errors.concepto }}</p>
+                        <option value="">Seleccionar...</option>
+                        <option v-for="concepto in CONCEPTOS_CHEQUES" :key="concepto.codigo" :value="concepto.codigo">
+                          {{ concepto.codigo }} - {{ concepto.descripcion }}
+                        </option>
+                      </select>
+                      <p v-if="errors.concepto" class="error-message text-xs">{{ errors.concepto }}</p>
                     </div>
-                  </div>
 
-                  <!-- Campos específicos para CHEQUE -->
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <!-- Importe -->
+                    <div class="form-group">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                        </svg>
+                        Importe
+                      </label>
+                      <div class="relative">
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <input 
+                          v-model.number="cheque.importe" 
+                          type="number" 
+                          step="0.01" 
+                          required 
+                          class="form-input pl-8 text-sm py-2"
+                          :class="{ 'border-red-300 bg-red-50': errors.importe }"
+                          placeholder="0.00"
+                        >
+                      </div>
+                      <p v-if="errors.importe" class="error-message text-xs">{{ errors.importe }}</p>
+                    </div>
+
                     <!-- Banco -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                         </svg>
                         Banco
@@ -162,19 +204,18 @@
                         v-model="cheque.banco" 
                         type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.banco }"
-                        placeholder="Ej: Banco Nación"
+                        placeholder="Banco Nación"
                       >
-                      <p v-if="errors.banco" class="error-message">{{ errors.banco }}</p>
+                      <p v-if="errors.banco" class="error-message text-xs">{{ errors.banco }}</p>
                     </div>
 
                     <!-- Sucursal -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         </svg>
                         Sucursal
                       </label>
@@ -182,17 +223,17 @@
                         v-model="cheque.sucursal" 
                         type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.sucursal }"
-                        placeholder="Ej: Centro"
+                        placeholder="Centro"
                       >
-                      <p v-if="errors.sucursal" class="error-message">{{ errors.sucursal }}</p>
+                      <p v-if="errors.sucursal" class="error-message text-xs">{{ errors.sucursal }}</p>
                     </div>
 
                     <!-- Localidad -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                         Localidad
@@ -201,77 +242,55 @@
                         v-model="cheque.localidad" 
                         type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.localidad }"
-                        placeholder="Ej: Buenos Aires"
+                        placeholder="Buenos Aires"
                       >
-                      <p v-if="errors.localidad" class="error-message">{{ errors.localidad }}</p>
+                      <p v-if="errors.localidad" class="error-message text-xs">{{ errors.localidad }}</p>
                     </div>
 
                     <!-- Número de cheque -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
                         </svg>
-                        Número de Cheque
+                        N° Cheque
                       </label>
                       <input 
                         v-model="cheque.nro_cheque" 
                         type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.nro_cheque }"
-                        placeholder="Ej: 12345678"
+                        placeholder="12345678"
                       >
-                      <p v-if="errors.nro_cheque" class="error-message">{{ errors.nro_cheque }}</p>
+                      <p v-if="errors.nro_cheque" class="error-message text-xs">{{ errors.nro_cheque }}</p>
                     </div>
 
                     <!-- Número de cuenta del cheque -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                         </svg>
-                        Cuenta del Cheque
+                        N° Cuenta
                       </label>
                       <input 
                         v-model="cheque.nro_cuenta" 
                         type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.nro_cuenta }"
-                        placeholder="Ej: 987654321"
+                        placeholder="987654321"
                       >
-                      <p v-if="errors.nro_cuenta" class="error-message">{{ errors.nro_cuenta }}</p>
+                      <p v-if="errors.nro_cuenta" class="error-message text-xs">{{ errors.nro_cuenta }}</p>
                     </div>
 
-                    <!-- Titular -->
-                    <div class="form-group md:col-span-2">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                        </svg>
-                        Titular
-                      </label>
-                      <input 
-                        v-model="cheque.titular" 
-                        type="text" 
-                        required 
-                        class="form-input"
-                        :class="{ 'border-red-300 bg-red-50': errors.titular }"
-                        placeholder="Nombre completo del titular"
-                      >
-                      <p v-if="errors.titular" class="error-message">{{ errors.titular }}</p>
-                    </div>
-                  </div>
-
-                  <!-- Fecha e Importe para cheques -->
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <!-- Fecha -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                         Fecha
@@ -280,134 +299,131 @@
                         v-model="cheque.fecha" 
                         type="date" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.fecha }"
                       >
-                      <p v-if="errors.fecha" class="error-message">{{ errors.fecha }}</p>
+                      <p v-if="errors.fecha" class="error-message text-xs">{{ errors.fecha }}</p>
                     </div>
 
-                    <!-- Importe -->
-                    <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                    <!-- Titular - Span completo -->
+                    <div class="form-group lg:col-span-2">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                         </svg>
-                        Importe
+                        Titular
                       </label>
-                      <div class="relative">
-                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
-                        <input 
-                          v-model.number="cheque.importe" 
-                          type="number" 
-                          step="0.01" 
-                          required 
-                          class="form-input pl-8"
-                          :class="{ 'border-red-300 bg-red-50': errors.importe }"
-                          placeholder="0.00"
-                        >
-                      </div>
-                      <p v-if="errors.importe" class="error-message">{{ errors.importe }}</p>
+                      <input 
+                        v-model="cheque.titular" 
+                        type="text" 
+                        required 
+                        class="form-input text-sm py-2"
+                        :class="{ 'border-red-300 bg-red-50': errors.titular }"
+                        placeholder="Nombre completo del titular"
+                      >
+                      <p v-if="errors.titular" class="error-message text-xs">{{ errors.titular }}</p>
                     </div>
                   </div>
-                </div>
-
-                <!-- Botón para agregar otro cheque -->
-                <div class="flex justify-end">
-                  <button 
-                    @click.prevent="agregarCheque" 
-                    class="btn-primary flex items-center"
-                  >
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Agregar Otro Cheque
-                  </button>
                 </div>
               </div>
 
               <!-- Sección para múltiples retenciones -->
-              <div v-if="formData.tipo === 'RETENCION'" class="mt-8">
-                <h4 class="font-semibold text-gray-900 text-lg mb-4">Detalles de la Retención</h4>
-                <div v-for="(retencion, index) in formData.retenciones" :key="index" class="bg-white p-4 rounded-xl shadow-sm mb-4 border border-gray-200">
-                  <div class="flex justify-between items-center mb-4">
-                    <h5 class="font-semibold text-gray-800">Retención {{ index + 1 }}</h5>
+              <div v-if="formData.tipo === 'RETENCION'" class="mt-6">
+                <h4 class="font-semibold text-gray-900 text-lg mb-3 flex items-center">
+                  <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Retenciones
+                  <button 
+                    @click.prevent="agregarRetencion" 
+                    class="ml-auto bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center"
+                  >
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Agregar
+                  </button>
+                </h4>
+                
+                <div v-for="(retencion, index) in formData.retenciones" :key="index" class="bg-white p-4 rounded-xl shadow-sm mb-3 border border-gray-200">
+                  <div class="flex justify-between items-center mb-3">
+                    <span class="font-semibold text-gray-800 text-sm">Retención #{{ index + 1 }}</span>
                     <button 
+                      v-if="formData.retenciones.length > 1"
                       @click="eliminarRetencion(index)" 
-                      class="text-red-600 hover:text-red-500 transition-all duration-200"
+                      class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
                     >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                       </svg>
                     </button>
                   </div>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     <!-- Número de cuenta -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                         </svg>
-                        Número de Cliente
+                        N° Cliente
                       </label>
                       <input 
                         v-model="retencion.nrocta" 
                         type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.nrocta }"
-                        placeholder="Ej: 1234567890"
+                        placeholder="1234567890"
                       >
-                      <p v-if="errors.nrocta" class="error-message">{{ errors.nrocta }}</p>
+                      <p v-if="errors.nrocta" class="error-message text-xs">{{ errors.nrocta }}</p>
                     </div>
 
                     <!-- Concepto -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                         Concepto
                       </label>
-                      <input 
+                      <select
                         v-model="retencion.concepto" 
-                        type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.concepto }"
-                        placeholder="Descripción del movimiento"
                       >
-                      <p v-if="errors.concepto" class="error-message">{{ errors.concepto }}</p>
+                        <option value="">Seleccionar...</option>
+                        <option v-for="concepto in CONCEPTOS_RETENCIONES" :key="concepto.codigo" :value="concepto.codigo">
+                          {{ concepto.codigo }} - {{ concepto.descripcion }}
+                        </option>
+                      </select>
+                      <p v-if="errors.concepto" class="error-message text-xs">{{ errors.concepto }}</p>
                     </div>
-                  </div>
 
-                  <!-- Campos específicos para RETENCION -->
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <!-- Número de Retención -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
                         </svg>
-                        Número de Retención
+                        N° Retención
                       </label>
                       <input 
                         v-model="retencion.nro_retencion" 
                         type="text" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.nro_retencion }"
-                        placeholder="Ej: RET001"
+                        placeholder="RET001"
                       >
-                      <p v-if="errors.nro_retencion" class="error-message">{{ errors.nro_retencion }}</p>
+                      <p v-if="errors.nro_retencion" class="error-message text-xs">{{ errors.nro_retencion }}</p>
                     </div>
-                  </div>
 
-                  <!-- Fecha e Importe para retenciones -->
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <!-- Fecha -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
                         Fecha
@@ -416,48 +432,35 @@
                         v-model="retencion.fecha" 
                         type="date" 
                         required 
-                        class="form-input"
+                        class="form-input text-sm py-2"
                         :class="{ 'border-red-300 bg-red-50': errors.fecha }"
                       >
-                      <p v-if="errors.fecha" class="error-message">{{ errors.fecha }}</p>
+                      <p v-if="errors.fecha" class="error-message text-xs">{{ errors.fecha }}</p>
                     </div>
 
                     <!-- Importe -->
                     <div class="form-group">
-                      <label class="form-label">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <label class="form-label text-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
                         </svg>
                         Importe
                       </label>
                       <div class="relative">
-                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">$</span>
+                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
                         <input 
                           v-model.number="retencion.importe" 
                           type="number" 
                           step="0.01" 
                           required 
-                          class="form-input pl-8"
+                          class="form-input pl-8 text-sm py-2"
                           :class="{ 'border-red-300 bg-red-50': errors.importe }"
                           placeholder="0.00"
                         >
                       </div>
-                      <p v-if="errors.importe" class="error-message">{{ errors.importe }}</p>
+                      <p v-if="errors.importe" class="error-message text-xs">{{ errors.importe }}</p>
                     </div>
                   </div>
-                </div>
-
-                <!-- Botón para agregar otra retención -->
-                <div class="flex justify-end">
-                  <button 
-                    @click.prevent="agregarRetencion" 
-                    class="btn-primary flex items-center"
-                  >
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Agregar Otra Retención
-                  </button>
                 </div>
               </div>
 
@@ -469,8 +472,8 @@
                 </div>
               </div>
 
-              <!-- Botones mejorados -->
-              <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <!-- Botones dentro del formulario -->
+              <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-6">
                 <button 
                   type="button" 
                   @click="$emit('close')"
@@ -490,6 +493,7 @@
                   <svg v-if="!saving" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                   </svg>
+                  <div v-if="saving" class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
                   {{ saving ? 'Guardando...' : 'Guardar Cambios' }}
                 </button>
               </div>
@@ -505,6 +509,45 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
 import { formatDate, formatCurrency } from '../utils/formatters.js'
+
+// Conceptos predefinidos para cheques
+const CONCEPTOS_CHEQUES = [
+  { codigo: 'CHE', descripcion: 'CHEQUE COMUN' },
+  { codigo: 'CNO', descripcion: 'CHEQUE NO A LA ORDEN' },
+  { codigo: 'CTJ', descripcion: 'BCO CIUDAD CTAS JUDICIALES' },
+  { codigo: 'DBF', descripcion: 'BCO. FRANCES 1382/2' },
+  { codigo: 'DF2', descripcion: 'BBVA 0579/9 (JUMI)' },
+  { codigo: 'DF3', descripcion: 'NACION 3275/1 (JUMI)' },
+  { codigo: 'DF5', descripcion: 'SUPERVIELLE 5121/2 (LUFRAN)' },
+  { codigo: 'ECH', descripcion: 'E-CHECK' },
+  { codigo: 'EF2', descripcion: 'EFECTIVO CAJA 02' },
+  { codigo: 'EFE', descripcion: 'EFECTIVO' },
+  { codigo: 'GRP', descripcion: 'GROUPON' },
+  { codigo: 'PMC', descripcion: 'PAGOMISCUENTAS' }
+]
+
+// Conceptos predefinidos para retenciones
+const CONCEPTOS_RETENCIONES = [
+  { codigo: 'RCI', descripcion: 'RETENCION TISH CIUDA.' },
+  { codigo: 'RGA', descripcion: 'RETENCION GANANCIAS' },
+  { codigo: 'RIB', descripcion: 'RETENCION IIBB BS.AS' },
+  { codigo: 'RIC', descripcion: 'RETENCION IIBB CABA' },
+  { codigo: 'RIV', descripcion: 'RETENCION DE IVA' },
+  { codigo: 'RLP', descripcion: 'RETENCION TISH LP' },
+  { codigo: 'RMI', descripcion: 'RETENCIONES IB MISIONES' },
+  { codigo: 'RSU', descripcion: 'RETENCION SUSS' },
+  { codigo: 'CTJ', descripcion: 'BCO CIUDAD CTAS JUDICIALES' },
+  { codigo: 'DBF', descripcion: 'BCO. FRANCES 1382/2' },
+  { codigo: 'DF2', descripcion: 'BBVA 0579/9 (JUMI)' },
+  { codigo: 'DF3', descripcion: 'NACION 3275/1 (JUMI)' },
+  { codigo: 'DF5', descripcion: 'SUPERVIELLE 5121/2 (LUFRAN)' },
+  { codigo: 'ECH', descripcion: 'E-CHECK' },
+  { codigo: 'EF2', descripcion: 'EFECTIVO CAJA 02' },
+  { codigo: 'EFE', descripcion: 'EFECTIVO' },
+  { codigo: 'GRP', descripcion: 'GROUPON' },
+  { codigo: 'PMC', descripcion: 'PAGOMISCUENTAS' },
+  { codigo: 'CHC', descripcion: 'RETENCION TISH CIUDA' }
+]
 
 const props = defineProps({
   isVisible: {
@@ -532,6 +575,18 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'save'])
 
+// Funciones para obtener descripción de conceptos
+const getConceptoDescripcion = (codigo, esCheque = true) => {
+  const conceptos = esCheque ? CONCEPTOS_CHEQUES : CONCEPTOS_RETENCIONES
+  const concepto = conceptos.find(c => c.codigo === codigo)
+  return concepto ? `${codigo} - ${concepto.descripcion}` : codigo
+}
+
+const getConceptoCodigo = (codigoCompleto) => {
+  // Extraer solo el código antes del " - "
+  return codigoCompleto ? codigoCompleto.split(' - ')[0] : ''
+}
+
 const formData = ref({
   tipo: '',
   // Arrays para múltiples cheques y retenciones
@@ -552,18 +607,18 @@ const onTipoChange = () => {
     formData.value.retenciones = [crearRetencionVacia()]
     formData.value.cheques = []
     
-    // Configurar concepto por defecto
+    // Configurar concepto por defecto (usar código, no descripción)
     if (!formData.value.concepto) {
-      formData.value.concepto = 'Retención'
+      formData.value.concepto = 'RGA' // RETENCION GANANCIAS como defecto
     }
   } else if (formData.value.tipo === 'CHEQUE') {
     // Inicializar con un cheque vacío
     formData.value.cheques = [crearChequeVacio()]
     formData.value.retenciones = []
     
-    // Configurar concepto por defecto
+    // Configurar concepto por defecto (usar código, no descripción)
     if (!formData.value.concepto) {
-      formData.value.concepto = 'Pago con cheque'
+      formData.value.concepto = 'CHE' // CHEQUE COMUN como defecto
     }
   }
 }
@@ -741,7 +796,7 @@ const crearChequeVacio = () => {
   
   return {
     nrocta: nrocta,
-    concepto: '',
+    concepto: 'CHE', // CHEQUE COMUN como defecto
     banco: '',
     sucursal: '',
     localidad: '',
@@ -765,7 +820,7 @@ const crearRetencionVacia = () => {
   
   return {
     nrocta: nrocta,
-    concepto: '',
+    concepto: 'RGA', // RETENCION GANANCIAS como defecto
     nro_retencion: '',
     fecha: new Date().toISOString().split('T')[0],
     importe: 0
@@ -896,37 +951,38 @@ const getDepositId = (reparto) => {
 </script>
 
 <style scoped>
-/* Formulario mejorado */
+/* Formulario más compacto */
 .form-group {
   position: relative;
+  margin-bottom: 0.75rem; /* Reducido de 1rem */
 }
 
 .form-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 6px; /* Reducido de 8px */
+  font-size: 12px; /* Reducido de 14px */
   font-weight: 600;
   color: #374151;
-  margin-bottom: 6px;
+  margin-bottom: 4px; /* Reducido de 6px */
 }
 
 .form-input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 8px 12px; /* Reducido de 12px 16px */
   border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 8px; /* Reducido de 12px */
+  font-size: 13px; /* Reducido de 14px */
   transition: all 0.2s ease;
   background-color: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .form-input:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); /* Reducido de 3px a 2px */
+  transform: translateY(-0.5px); /* Reducido de -1px */
 }
 
 .form-input:hover {
@@ -935,6 +991,7 @@ const getDepositId = (reparto) => {
 
 .form-input::placeholder {
   color: #9ca3af;
+  font-size: 12px;
 }
 
 /* Estados de error */
@@ -945,70 +1002,70 @@ const getDepositId = (reparto) => {
 
 .error-message {
   color: #dc2626;
-  font-size: 12px;
-  margin-top: 4px;
+  font-size: 11px; /* Reducido de 12px */
+  margin-top: 2px; /* Reducido de 4px */
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px; /* Reducido de 4px */
 }
 
 .error-message::before {
   content: "⚠️";
-  font-size: 10px;
+  font-size: 9px; /* Reducido de 10px */
 }
 
-/* Botones mejorados */
+/* Botones más compactos */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 24px;
+  padding: 10px 20px; /* Reducido de 12px 24px */
   background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: white;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px; /* Reducido de 14px */
   border: none;
-  border-radius: 12px;
+  border-radius: 10px; /* Reducido de 12px */
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.25);
-  min-width: 140px;
+  box-shadow: 0 3px 5px rgba(59, 130, 246, 0.25); /* Reducido */
+  min-width: 120px; /* Reducido de 140px */
 }
 
 .btn-primary:hover:not(:disabled) {
   background: linear-gradient(135deg, #2563eb, #1e40af);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(59, 130, 246, 0.35);
+  transform: translateY(-0.5px); /* Reducido de -1px */
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.35); /* Reducido */
 }
 
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.15); /* Reducido */
 }
 
 .btn-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 24px;
+  padding: 10px 20px; /* Reducido de 12px 24px */
   background-color: #f9fafb;
   color: #374151;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px; /* Reducido de 14px */
   border: 2px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 10px; /* Reducido de 12px */
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 100px;
+  min-width: 90px; /* Reducido de 100px */
 }
 
 .btn-secondary:hover:not(:disabled) {
   background-color: #f3f4f6;
   border-color: #d1d5db;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transform: translateY(-0.5px); /* Reducido de -1px */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Reducido */
 }
 
 .btn-secondary:disabled {
@@ -1017,10 +1074,10 @@ const getDepositId = (reparto) => {
   transform: none;
 }
 
-/* Animaciones personalizadas */
+/* Animaciones más sutiles */
 @keyframes slideInUp {
   from {
-    transform: translateY(20px);
+    transform: translateY(15px); /* Reducido de 20px */
     opacity: 0;
   }
   to {
@@ -1039,22 +1096,22 @@ const getDepositId = (reparto) => {
 }
 
 .form-group {
-  animation: slideInUp 0.3s ease-out;
+  animation: slideInUp 0.2s ease-out; /* Reducido de 0.3s */
 }
 
-.form-group:nth-child(1) { animation-delay: 0.1s; }
-.form-group:nth-child(2) { animation-delay: 0.2s; }
-.form-group:nth-child(3) { animation-delay: 0.3s; }
-.form-group:nth-child(4) { animation-delay: 0.4s; }
-.form-group:nth-child(5) { animation-delay: 0.5s; }
+.form-group:nth-child(1) { animation-delay: 0.05s; }
+.form-group:nth-child(2) { animation-delay: 0.1s; }
+.form-group:nth-child(3) { animation-delay: 0.15s; }
+.form-group:nth-child(4) { animation-delay: 0.2s; }
+.form-group:nth-child(5) { animation-delay: 0.25s; }
 
-/* Mejoras para select */
+/* Select más compacto */
 select.form-input {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 12px center;
+  background-position: right 10px center; /* Reducido de 12px */
   background-repeat: no-repeat;
-  background-size: 16px;
-  padding-right: 40px;
+  background-size: 14px; /* Reducido de 16px */
+  padding-right: 35px; /* Reducido de 40px */
   appearance: none;
 }
 
@@ -1068,15 +1125,20 @@ select.form-input {
   .btn-primary, .btn-secondary {
     flex: 1;
     min-width: auto;
+    padding: 8px 16px; /* Más compacto en móvil */
   }
   
   .form-input {
-    padding: 10px 14px;
+    padding: 8px 12px;
     font-size: 16px; /* Evita zoom en iOS */
+  }
+  
+  .form-label {
+    font-size: 11px;
   }
 }
 
-/* Loading spinner mejorado */
+/* Loading spinner */
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -1090,12 +1152,26 @@ select.form-input {
   animation: spin 1s linear infinite;
 }
 
-/* Hover effects para los iconos */
+/* Hover effects para los iconos más suaves */
 .form-label svg {
-  transition: transform 0.2s ease;
+  transition: transform 0.15s ease; /* Reducido de 0.2s */
 }
 
 .form-group:hover .form-label svg {
-  transform: scale(1.1);
+  transform: scale(1.05); /* Reducido de 1.1 */
+}
+
+/* Espacios más compactos */
+.space-y-4 > * + * {
+  margin-top: 1rem;
+}
+
+.space-y-3 > * + * {
+  margin-top: 0.75rem;
+}
+
+/* Grid gaps más pequeños */
+.gap-3 {
+  gap: 0.75rem;
 }
 </style>

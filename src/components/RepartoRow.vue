@@ -1,6 +1,6 @@
 <template>
   <tr 
-    :class="getRowClass(reparto.estado || 'PENDIENTE')"
+    :class="getRowClass(getEstadoEfectivo())"
     class="group transition-all duration-300 ease-out hover:bg-gradient-to-r hover:from-blue-50/30 hover:via-transparent hover:to-purple-50/30 hover:shadow-lg relative border-b border-gray-100 hover:border-transparent"
   >
     
@@ -51,20 +51,20 @@
     <td class="px-2 py-1.5 whitespace-nowrap text-right">
       <div class="flex items-center justify-end space-x-1">
         <svg class="w-3 h-3 flex-shrink-0" 
-             :class="getDifferenceIconClass(reparto.estado || 'PENDIENTE')" 
+             :class="getDifferenceIconClass(getEstadoEfectivo())" 
              fill="currentColor" viewBox="0 0 20 20">
-          <path v-if="reparto.diferencia === 0" fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-          <path v-else-if="reparto.diferencia > 0" fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+          <path v-if="diferenciaActual === 0" fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+          <path v-else-if="diferenciaActual > 0" fill-rule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
           <path v-else fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"></path>
         </svg>
         <div class="text-xs font-bold font-mono" 
-             :class="getDifferenceIconClass(reparto.estado || 'PENDIENTE')">
-          {{ formatCurrency(Math.abs(reparto.diferencia || 0)) }}
+             :class="getDifferenceIconClass(getEstadoEfectivo())">
+          {{ formatCurrency(Math.abs(diferenciaActual || 0)) }}
         </div>
       </div>
       <div class="text-xs font-medium" 
-           :class="getDifferenceIconClass(reparto.estado || 'PENDIENTE')">
-        {{ getDifferenceLabel(reparto.estado || 'PENDIENTE') }}
+           :class="getDifferenceIconClass(getEstadoEfectivo())">
+        {{ getDifferenceLabel(getEstadoEfectivo()) }}
       </div>
     </td>
 
@@ -72,7 +72,7 @@
     <td class="px-2 py-1.5 whitespace-nowrap">
       <div class="flex justify-center">
         <EstadoSelector
-          :estado="reparto.estado || 'PENDIENTE'"
+          :estado="getEstadoEfectivo()"
           :deposito-id="getDepositId(reparto)"
           :planta="getPlantaName(reparto)"
           :compact="true"
@@ -224,6 +224,38 @@ const props = defineProps({
 
 const emit = defineEmits(['edit', 'delete-movement', 'view-movements', 'toggle-comprobantes', 'estado-actualizado'])
 
+// Función para calcular el estado dinámicamente basado en la diferencia actual
+const getEstadoDinamico = computed(() => {
+  const diferencia = props.reparto.depositoReal - props.reparto.depositoEsperado
+  
+  if (diferencia === 0) {
+    return 'EXACTO'
+  } else if (diferencia > 0) {
+    return 'SOBRANTE'
+  } else {
+    return 'FALTANTE'
+  }
+})
+
+// Función para obtener el estado efectivo (dinámico o del backend)
+const getEstadoEfectivo = () => {
+  // Estados finales que no deben cambiar automáticamente
+  const estadosFinales = ['LISTO', 'ENVIADO']
+  
+  if (props.reparto.estado && estadosFinales.includes(props.reparto.estado)) {
+    return props.reparto.estado
+  }
+  
+  // Para todos los demás casos (incluyendo FALTANTE, SOBRANTE, EXACTO, PENDIENTE)
+  // calcular dinámicamente según la diferencia actual
+  return getEstadoDinamico.value
+}
+
+// Computed para obtener la diferencia actual (calculada dinámicamente)
+const diferenciaActual = computed(() => {
+  return props.reparto.depositoReal - props.reparto.depositoEsperado
+})
+
 // Composable para comprobantes
 const { 
   comprobantes, 
@@ -354,7 +386,8 @@ const extractRepartoNumber = (idReparto) => {
 
 // Función para determinar si un reparto necesita movimiento financiero
 const needsMovement = (reparto) => {
-  return reparto.diferencia !== 0 && !reparto.movimientoFinanciero
+  const diferencia = reparto.depositoReal - reparto.depositoEsperado
+  return diferencia !== 0 && !reparto.movimientoFinanciero
 }
 
 // Funciones para el diseño premium basadas en estado del backend
