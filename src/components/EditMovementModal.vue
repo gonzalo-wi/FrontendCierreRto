@@ -510,6 +510,52 @@
 import { ref, watch, computed } from 'vue'
 import { formatDate, formatCurrency } from '../utils/formatters.js'
 
+// Función utilitaria para obtener el reparto desde cualquier fuente disponible
+const getRepartoData = () => {
+  // PRIORIDAD 1: props.reparto (binding directo desde RepartoView)
+  if (props.reparto) {
+    console.log('🎯 [EditModal] Usando props.reparto:', props.reparto.idReparto)
+    return props.reparto
+  }
+  
+  // PRIORIDAD 2: reparto desde movimientoData (para modo edición)
+  if (props.movimientoData && props.movimientoData.reparto) {
+    console.log('🎯 [EditModal] Usando movimientoData.reparto:', props.movimientoData.reparto.idReparto)
+    return props.movimientoData.reparto
+  }
+  
+  console.error('❌ [EditModal] No se pudo encontrar reparto en ninguna fuente')
+  return null
+}
+
+// Función utilitaria para formatear fechas para input type="date"
+const formatDateForInput = (dateString) => {
+  if (!dateString) return new Date().toISOString().split('T')[0]
+  
+  // Si ya está en formato YYYY-MM-DD, devolverlo tal como está
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString
+  }
+  
+  // Si es un timestamp completo, extraer solo la fecha
+  if (dateString.includes('T') || dateString.includes(' ')) {
+    return dateString.split('T')[0].split(' ')[0]
+  }
+  
+  // Si es en otro formato, intentar parsearlo
+  try {
+    const date = new Date(dateString)
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0]
+    }
+  } catch (error) {
+    console.warn('Error al formatear fecha:', dateString, error)
+  }
+  
+  // Fallback a fecha actual
+  return new Date().toISOString().split('T')[0]
+}
+
 // Conceptos predefinidos para cheques
 const CONCEPTOS_CHEQUES = [
   { codigo: 'CHE', descripcion: 'CHEQUE COMUN' },
@@ -713,6 +759,38 @@ const eliminarRetencion = (index) => {
 // Watchers para validación en tiempo real
 watch(() => formData.value.tipo, (newVal) => validateField('tipo', newVal))
 
+// Watcher para observar cambios en props.reparto
+watch(() => props.reparto, (newReparto, oldReparto) => {
+  console.log('🔍 [EditModal] ============ CAMBIO EN PROPS.REPARTO ============')
+  console.log('🔍 [EditModal] oldReparto:', oldReparto?.idReparto || oldReparto?.id || 'null')
+  console.log('🔍 [EditModal] newReparto:', newReparto?.idReparto || newReparto?.id || 'null')
+  if (newReparto) {
+    console.log('🔍 [EditModal] newReparto completo:', JSON.stringify(newReparto, null, 2))
+  }
+  
+  // Stack trace para saber desde donde se cambia
+  console.trace('🔍 [EditModal] Stack trace del cambio en reparto:')
+}, { immediate: true })
+
+// Watcher para isVisible - verificar estado cuando se muestra/oculta el modal
+watch(() => props.isVisible, (newVisible, oldVisible) => {
+  console.log('👁️ [EditModal] ============ CAMBIO EN VISIBILIDAD ============')
+  console.log('👁️ [EditModal] oldVisible:', oldVisible)
+  console.log('👁️ [EditModal] newVisible:', newVisible)
+  console.log('👁️ [EditModal] props.reparto al cambiar visibilidad:', props.reparto?.idReparto || 'NULL!')
+  
+  if (newVisible && !props.reparto) {
+    console.error('❌ [EditModal] PROBLEMA: Modal se vuelve visible pero props.reparto es NULL!')
+    console.error('❌ [EditModal] Todas las props:', {
+      reparto: props.reparto,
+      movimientoData: props.movimientoData,
+      movimientoTipo: props.movimientoTipo,
+      isVisible: props.isVisible,
+      saving: props.saving
+    })
+  }
+}, { immediate: true })
+
 // Llenar formulario cuando se abre el modal
 watch(() => props.movimientoData, (newData) => {
   if (newData) {
@@ -735,7 +813,7 @@ watch(() => props.movimientoData, (newData) => {
         nro_cheque: newData.nro_cheque || '',
         nro_cuenta: newData.nro_cuenta || '',
         titular: newData.titular || '',
-        fecha: newData.fecha || '',
+        fecha: formatDateForInput(newData.fecha),
         importe: newData.importe || 0
       }]
     } else if (newData.tipo === 'RETENCION') {
@@ -743,7 +821,7 @@ watch(() => props.movimientoData, (newData) => {
         nrocta: newData.nrocta || '',
         concepto: newData.concepto || '',
         nro_retencion: newData.nro_retencion || '',
-        fecha: newData.fecha || '',
+        fecha: formatDateForInput(newData.fecha),
         importe: newData.importe || 0
       }]
     }
@@ -785,12 +863,13 @@ watch(() => props.movimientoTipo, (nuevoTipo) => {
 
 // Funciones auxiliares para crear elementos vacíos
 const crearChequeVacio = () => {
-  // Intentar obtener nrocta del reparto o de sus depósitos
+  // Intentar obtener nrocta del reparto usando getRepartoData()
   let nrocta = ''
-  if (props.reparto) {
+  const repartoData = getRepartoData()
+  if (repartoData) {
     // Intentar obtener de diferentes ubicaciones en el reparto
-    nrocta = props.reparto.nrocta || 
-            (props.reparto.deposits && props.reparto.deposits[0] && props.reparto.deposits[0].nrocta) ||
+    nrocta = repartoData.nrocta || 
+            (repartoData.deposits && repartoData.deposits[0] && repartoData.deposits[0].nrocta) ||
             ''
   }
   
@@ -809,12 +888,13 @@ const crearChequeVacio = () => {
 }
 
 const crearRetencionVacia = () => {
-  // Intentar obtener nrocta del reparto o de sus depósitos
+  // Intentar obtener nrocta del reparto usando getRepartoData()
   let nrocta = ''
-  if (props.reparto) {
+  const repartoData = getRepartoData()
+  if (repartoData) {
     // Intentar obtener de diferentes ubicaciones en el reparto
-    nrocta = props.reparto.nrocta || 
-            (props.reparto.deposits && props.reparto.deposits[0] && props.reparto.deposits[0].nrocta) ||
+    nrocta = repartoData.nrocta || 
+            (repartoData.deposits && repartoData.deposits[0] && repartoData.deposits[0].nrocta) ||
             ''
   }
   
@@ -831,6 +911,26 @@ const handleSubmit = () => {
   console.log('🚀 [MODAL] ============ INICIANDO SUBMIT ============')
   console.log('🚀 [MODAL] formData.value:', formData.value)
   console.log('🚀 [MODAL] props.reparto:', props.reparto)
+  console.log('🚀 [MODAL] props.movimientoData:', props.movimientoData)
+  
+  // Diagnóstico detallado del reparto
+  if (!props.reparto) {
+    console.error('❌ [MODAL] ============ DIAGNÓSTICO: PROPS.REPARTO ES NULL ============')
+    console.error('❌ [MODAL] Todas las props:', {
+      reparto: props.reparto,
+      movimientoData: props.movimientoData,
+      movimientoTipo: props.movimientoTipo,
+      isVisible: props.isVisible,
+      saving: props.saving
+    })
+  } else {
+    console.log('✅ [MODAL] props.reparto está disponible:', {
+      idReparto: props.reparto.idReparto,
+      id: props.reparto.id,
+      deposit_id: props.reparto.deposit_id,
+      nrocta: props.reparto.nrocta
+    })
+  }
   
   // Validar todos los campos de todos los elementos del array
   let allValid = true
@@ -861,13 +961,26 @@ const handleSubmit = () => {
   console.log('🔍 [MODAL] Resultado de validación allValid:', allValid)
   
   if (allValid) {
-    // Obtener deposit_id del reparto (usando la misma lógica que RepartoRow)
-    const depositId = getDepositId(props.reparto)
+    // Obtener el reparto desde múltiples fuentes
+    const repartoData = getRepartoData()
+    console.log('🏗️ [MODAL] repartoData obtenido:', repartoData?.idReparto || repartoData?.id || 'NULL')
+    
+    if (!repartoData) {
+      console.error('❌ [MODAL] No se pudo obtener datos del reparto desde ninguna fuente')
+      console.error('❌ [MODAL] props.reparto:', props.reparto)
+      console.error('❌ [MODAL] props.movimientoData.reparto:', props.movimientoData?.reparto)
+      alert('Error: No se pudo identificar el reparto. Por favor, cierre el modal e intente de nuevo.')
+      return
+    }
+    
+    // Obtener deposit_id del reparto
+    const depositId = getDepositId(repartoData)
     console.log('🏗️ [MODAL] deposit_id obtenido:', depositId)
     
     if (!depositId) {
       console.error('❌ [MODAL] No se pudo obtener deposit_id del reparto')
-      alert('Error: No se pudo identificar el reparto. Por favor, intenta de nuevo.')
+      console.error('❌ [MODAL] Detalles del reparto para diagnóstico:', repartoData)
+      alert('Error: No se pudo identificar el reparto. Por favor, cierre el modal e intente de nuevo.')
       return
     }
     

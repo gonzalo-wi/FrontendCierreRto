@@ -169,6 +169,7 @@
           :repartos="repartos"
           @refresh="fetchRepartos"
           @edit="openEditModal"
+          @edit-movement="openEditModalWithData"
           @delete-movement="deleteMovement"
           @delete-all-movements="deleteAllMovements"
           @view-movements="openMovimientosModal"
@@ -239,12 +240,22 @@
 
       <!-- Modal de edición -->
       <EditMovementModal
+        :key="`edit-${selectedReparto?.idReparto || 'new'}-${modalMovimientoTipo}-${Date.now()}`"
         :is-visible="showModal"
         :reparto="selectedReparto"
         :saving="saving"
         :movimiento-tipo="modalMovimientoTipo"
+        :movimiento-data="modalMovimientoData"
         @close="closeModal"
         @save="saveMovement"
+      />
+
+      <!-- Modal de selección de movimiento para editar -->
+      <SelectMovementModal
+        :is-visible="showSelectMovementModal"
+        :reparto="selectedReparto"
+        @close="closeSelectMovementModal"
+        @select-movement="handleSelectMovementForEdit"
       />
 
       <!-- Modal de Movimientos Financieros -->
@@ -275,12 +286,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { config } from '../config/config.js'
 import { useAuth } from '../composables/useAuth.js'
 import RepartoTable from '../components/RepartoTable.vue'
 import ComprobantesModal from '../components/ComprobantesModal.vue'
 import EditMovementModal from '../components/EditMovementModal.vue'
+import SelectMovementModal from '../components/SelectMovementModal.vue'
 import MovimientosFinancierosModal from '../components/MovimientosFinancierosModal.vue'
 import DateSelector from '../components/DateSelector.vue'
 import TotalsView from '../components/TotalsView.vue'
@@ -312,9 +324,11 @@ const isFetching = ref(false) // Flag para prevenir llamadas múltiples
 
 // Estado del modal
 const showModal = ref(false)
+const showSelectMovementModal = ref(false)
 const selectedReparto = ref(null)
 const saving = ref(false)
 const modalMovimientoTipo = ref(null) // cheque | retencion | null
+const modalMovimientoData = ref(null) // datos del movimiento para editar
 
 // Estados para modal de comprobantes
 const showComprobantesModal = ref(false)
@@ -721,17 +735,164 @@ const openEditModal = (repartoOrPayload, movimientoTipoArg) => {
     movimientoTipo = repartoOrPayload.movimientoTipo
   }
   
-  console.log('🔥 Abriendo modal con:', { reparto: reparto?.idReparto, movimientoTipo })
+  console.log('🔥 [RepartoView] Abriendo modal con:', { reparto: reparto?.idReparto, movimientoTipo })
+  console.log('🔍 [RepartoView] reparto completo:', JSON.stringify(reparto, null, 2))
+  
   selectedReparto.value = reparto
-  modalMovimientoTipo.value = movimientoTipo || null
+  
+  // Si el reparto tiene movimientos existentes, abrir modal de selección
+  if (reparto?.movimientoFinanciero && 
+      ((reparto.movimientoFinanciero.cheques && reparto.movimientoFinanciero.cheques.length > 0) ||
+       (reparto.movimientoFinanciero.retenciones && reparto.movimientoFinanciero.retenciones.length > 0))) {
+    
+    console.log('✏️ [RepartoView] Reparto tiene movimientos existentes, abriendo modal de SELECCIÓN')
+    showSelectMovementModal.value = true
+    
+  } else {
+    // Si no tiene movimientos, abrir modal de creación normal
+    console.log('➕ [RepartoView] Reparto sin movimientos, abriendo modal de CREACIÓN')
+    modalMovimientoTipo.value = movimientoTipo || null
+    modalMovimientoData.value = null
+    showModal.value = true
+  }
+}
+
+// Función específica para abrir modal con datos específicos del movimiento
+const openEditModalWithData = (eventPayload) => {
+  console.log('✏️ [RepartoView] ============ ABRIENDO MODAL CON DATOS ESPECÍFICOS ============')
+  console.log('✏️ [RepartoView] eventPayload recibido:', JSON.stringify(eventPayload, null, 2))
+  
+  const { tipo, movimiento, index, reparto } = eventPayload
+  
+  console.log('✏️ [RepartoView] Datos extraídos del payload:')
+  console.log('✏️ [RepartoView]   - tipo:', tipo)
+  console.log('✏️ [RepartoView]   - movimiento:', JSON.stringify(movimiento, null, 2))
+  console.log('✏️ [RepartoView]   - index:', index)
+  console.log('✏️ [RepartoView]   - reparto:', reparto?.idReparto)
+  
+  // Validar que el reparto existe antes de continuar
+  if (!reparto) {
+    console.error('❌ [RepartoView] ERROR: reparto es null en eventPayload')
+    console.error('❌ [RepartoView] eventPayload completo:', eventPayload)
+    alert('Error: No se pudo identificar el reparto. Intente de nuevo.')
+    return
+  }
+  
+  // Configurar el modal con los datos específicos
+  selectedReparto.value = reparto
+  modalMovimientoTipo.value = tipo === 'cheque' ? 'CHEQUE' : 'RETENCION'
+  
+  // Preparar los datos del movimiento para el modal
+  const movimientoData = {
+    tipo: tipo === 'cheque' ? 'CHEQUE' : 'RETENCION',
+    ...movimiento, // Spread todas las propiedades del movimiento específico
+    index, // Agregar el índice para poder identificar el movimiento posteriormente
+    reparto: reparto // AGREGAR EL REPARTO DIRECTAMENTE EN LOS DATOS DEL MOVIMIENTO
+  }
+  
+  modalMovimientoData.value = movimientoData
+  
+  console.log('✏️ [RepartoView] Modal configurado con:')
+  console.log('✏️ [RepartoView]   - selectedReparto:', selectedReparto.value?.idReparto)
+  console.log('✏️ [RepartoView]   - modalMovimientoTipo:', modalMovimientoTipo.value)
+  console.log('✏️ [RepartoView]   - modalMovimientoData:', JSON.stringify(modalMovimientoData.value, null, 2))
+  
+  // Verificar que selectedReparto se configuró correctamente
+  console.log('✏️ [RepartoView] ============ VERIFICACIÓN FINAL ============')
+  console.log('✏️ [RepartoView] selectedReparto.value configurado:', selectedReparto.value?.idReparto || 'NULL!')
+  console.log('✏️ [RepartoView] showModal será:', true)
+  
   showModal.value = true
+  
+  // Verificar después de un tick que el reparto sigue ahí
+  nextTick(() => {
+    console.log('✏️ [RepartoView] [POST-TICK] selectedReparto.value:', selectedReparto.value?.idReparto || 'NULL!')
+  })
+  
+  console.log('✏️ [RepartoView] ✅ Modal abierto con datos específicos del movimiento')
+}
+
+// Función para cerrar el modal de selección de movimiento
+const closeSelectMovementModal = () => {
+  console.log('🔒 [RepartoView] Cerrando modal de selección de movimiento')
+  showSelectMovementModal.value = false
+  // NO limpiar selectedReparto aquí porque handleSelectMovementForEdit lo necesita
+  // selectedReparto.value = null 
+}
+
+// Función para manejar la selección de un movimiento para editar
+const handleSelectMovementForEdit = (selectedData) => {
+  console.log('✏️ [RepartoView] ============ MOVIMIENTO SELECCIONADO PARA EDITAR ============')
+  console.log('✏️ [RepartoView] selectedData:', JSON.stringify(selectedData, null, 2))
+  
+  const { tipo, movimiento, index, reparto } = selectedData
+  
+  console.log('✏️ [RepartoView] Datos extraídos del payload:')
+  console.log('✏️ [RepartoView]   - tipo:', tipo)
+  console.log('✏️ [RepartoView]   - movimiento:', JSON.stringify(movimiento, null, 2))
+  console.log('✏️ [RepartoView]   - index:', index)
+  console.log('✏️ [RepartoView]   - reparto:', reparto?.idReparto)
+  
+  // Validar que el reparto existe antes de continuar
+  if (!reparto) {
+    console.error('❌ [RepartoView] ERROR: reparto es null en selectedData')
+    console.error('❌ [RepartoView] selectedData completo:', selectedData)
+    alert('Error: No se pudo identificar el reparto. Intente de nuevo.')
+    return
+  }
+  
+  // Cerrar el modal de selección
+  closeSelectMovementModal()
+  
+  // Configurar el modal de edición con los datos específicos
+  selectedReparto.value = reparto
+  modalMovimientoTipo.value = tipo
+  
+  // Preparar los datos del movimiento para el modal
+  const movimientoData = {
+    tipo,
+    ...movimiento, // Spread todas las propiedades del movimiento específico
+    index, // Agregar el índice para poder identificar el movimiento posteriormente
+    reparto: reparto // AGREGAR EL REPARTO DIRECTAMENTE EN LOS DATOS DEL MOVIMIENTO
+  }
+  
+  modalMovimientoData.value = movimientoData
+  
+  console.log('✏️ [RepartoView] Modal de edición configurado con:')
+  console.log('✏️ [RepartoView]   - selectedReparto:', selectedReparto.value?.idReparto)
+  console.log('✏️ [RepartoView]   - modalMovimientoTipo:', modalMovimientoTipo.value)
+  console.log('✏️ [RepartoView]   - modalMovimientoData:', JSON.stringify(modalMovimientoData.value, null, 2))
+  
+  // Verificar que selectedReparto se configuró correctamente
+  console.log('✏️ [RepartoView] ============ VERIFICACIÓN FINAL (SelectModal) ============')
+  console.log('✏️ [RepartoView] selectedReparto.value configurado:', selectedReparto.value?.idReparto || 'NULL!')
+  console.log('✏️ [RepartoView] showModal será:', true)
+  
+  // Abrir el modal de edición
+  showModal.value = true
+  
+  // Verificar después de un tick que el reparto sigue ahí
+  nextTick(() => {
+    console.log('✏️ [RepartoView] [POST-TICK SelectModal] selectedReparto.value:', selectedReparto.value?.idReparto || 'NULL!')
+  })
+  
+  console.log('✏️ [RepartoView] ✅ Modal de edición abierto con movimiento específico')
 }
 
 // Función para cerrar el modal
 const closeModal = () => {
+  console.log('🔒 [RepartoView] Cerrando modal principal')
+  console.log('🔒 [RepartoView] selectedReparto antes de limpiar:', selectedReparto.value?.idReparto)
   showModal.value = false
-  selectedReparto.value = null
-  modalMovimientoTipo.value = null
+  
+  // Usar nextTick para asegurar que el modal se cierre completamente antes de limpiar
+  // Esto previene que se pierda el reparto durante operaciones del modal
+  nextTick(() => {
+    selectedReparto.value = null
+    modalMovimientoTipo.value = null
+    modalMovimientoData.value = null
+    console.log('🔒 [RepartoView] Variables del modal limpiadas')
+  })
 }
 
 // Funciones para modal de comprobantes
@@ -842,12 +1003,12 @@ const saveMovement = async (movementData) => {
         console.log('➕ [REPARTO_VIEW] Creando retención(es) desde modal')
         
         for (const retencion of movementData.retenciones) {
-          // Estructura simplificada que espera el backend
+          // Estructura que espera el backend según la documentación
           const retencionData = {
-            tipo: retencion.concepto || "GANANCIAS",      // REQUERIDO - string
-            numero: retencion.nro_retencion,              // REQUERIDO - string
-            importe: parseFloat(retencion.importe),       // REQUERIDO - number
-            concepto: retencion.concepto || "RIB"         // OPCIONAL - string
+            numero: parseInt(retencion.nro_retencion),    // REQUERIDO - int (Número de retención)
+            importe: parseFloat(retencion.importe),       // REQUERIDO - float
+            concepto: retencion.concepto || "RIB",        // OPCIONAL - string (default: "RIB")
+            numero_cuenta: parseInt(retencion.nrocta)     // REQUERIDO - int (Número de cliente/cuenta)
           }
           console.log('⚠️ [REPARTO_VIEW] Creando retención con estructura del backend:', retencionData)
           await props.service.createRetencion(depositId, retencionData)
@@ -1165,6 +1326,18 @@ const onFechaSeleccionada = (fechaData) => {
 onMounted(() => {
   fetchRepartos()
 })
+
+// Watcher para detectar cambios en selectedReparto
+watch(selectedReparto, (newSelectedReparto, oldSelectedReparto) => {
+  console.log('🎯 [RepartoView] ============ CAMBIO EN SELECTED_REPARTO ============')
+  console.log('🎯 [RepartoView] oldSelectedReparto:', oldSelectedReparto?.idReparto || 'null')
+  console.log('🎯 [RepartoView] newSelectedReparto:', newSelectedReparto?.idReparto || 'null')
+  
+  if (!newSelectedReparto && oldSelectedReparto) {
+    console.warn('⚠️ [RepartoView] ALERTA: selectedReparto cambió de algo a NULL!')
+    console.trace('⚠️ [RepartoView] Stack trace del cambio a NULL:')
+  }
+}, { immediate: true })
 
 // Watcher para detectar cambios en repartos
 watch(repartos, (newRepartos, oldRepartos) => {

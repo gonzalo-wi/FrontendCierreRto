@@ -140,6 +140,7 @@
                   :compact="false"
                   :can-delete="true"
                   @delete-movement="handleDeleteMovement"
+                  @edit-movement="handleEditMovement"
                 />
               </div>
             </div>
@@ -210,7 +211,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'edit', 'create', 'delete-movement', 'delete-all-movements'])
+const emit = defineEmits(['close', 'edit', 'create', 'delete-movement', 'delete-all-movements', 'edit-movement'])
 
 // Computadas para estadísticas
 const cheques = computed(() => props.reparto?.cheques || props.reparto?.movimientoFinanciero?.cheques || [])
@@ -262,14 +263,28 @@ const handleDeleteMovement = (eventData) => {
     reparto: eventData.reparto || props.reparto // Usar el reparto del evento o del modal
   }
   
-  console.log('🗑️ [MovDetailModal] eventData mejorado:', JSON.stringify(enhancedEventData, null, 2))
-  console.log('🗑️ [MovDetailModal] Emitiendo al padre (RepartoTable)...')
-  
+  console.log('🗑️ [MovDetailModal] Reenviando evento al padre con datos mejorados')
   emit('delete-movement', enhancedEventData)
 }
 
-// Función para manejar eliminación de todos los movimientos
-const handleDeleteAll = () => {
+// Handler para manejar edición de movimientos específicos
+const handleEditMovement = (eventData) => {
+  console.log('✏️ [MovDetailModal] ============ MANEJANDO EDIT MOVEMENT ============')
+  console.log('✏️ [MovDetailModal] eventData recibido:', JSON.stringify(eventData, null, 2))
+  console.log('✏️ [MovDetailModal] props.reparto disponible:', props.reparto?.idReparto)
+  
+  // Asegurar que el reparto esté en el evento
+  const enhancedEventData = {
+    ...eventData,
+    reparto: eventData.reparto || props.reparto // Usar el reparto del evento o del modal
+  }
+  
+    console.log('✏️ [MovDetailModal] Reenviando evento al padre con datos mejorados')
+  emit('edit-movement', enhancedEventData)
+}
+
+// Handler para manejar eliminación de todos los movimientos
+const handleDeleteAllMovements = () => {
   const totalMov = totalMovimientos.value
   const montoTotalMov = montoTotal.value
   

@@ -1,6 +1,6 @@
 <template>
   <RepartoView 
-    title="Jumillano"
+    title="Ciudadela"
     :service="RtoJumiService"
   />
 </template>

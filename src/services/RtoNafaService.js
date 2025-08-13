@@ -260,6 +260,10 @@ export default {
         let totalRetenciones = 0
         let movimientosCargados = []
 
+        // Inicializar arrays de movimientos en el reparto
+        reparto.cheques = []
+        reparto.retenciones = []
+
         for (const deposit of reparto.deposits) {
           const depositId = deposit.deposit_id || deposit.id || deposit.identifier
 
@@ -270,21 +274,69 @@ export default {
             total_retenciones: deposit.total_retenciones || 0
           })
 
-          // Obtener cheques directamente del depósito (ya vienen en la respuesta principal)
+          // Primero intentar obtener directamente del depósito (ya vienen en la respuesta principal)
           if (deposit.cheques && Array.isArray(deposit.cheques) && deposit.cheques.length > 0) {
+            reparto.cheques.push(...deposit.cheques)
             const montoCheques = deposit.cheques.reduce((sum, cheque) => sum + parseFloat(cheque.importe || cheque.monto || 0), 0)
             totalCheques += montoCheques
             movimientosCargados.push(...deposit.cheques)
             console.log(`💰 [NAFA] Depósito ${depositId}: ${deposit.cheques.length} cheques por $${montoCheques} (desde respuesta principal)`)
+          } else {
+            // Si no vienen en la respuesta principal, hacer llamada específica como en Jumillano
+            try {
+              const chequesAdicionales = await this.getCheques(depositId)
+              if (chequesAdicionales && chequesAdicionales.length > 0) {
+                reparto.cheques.push(...chequesAdicionales)
+                const montoCheques = chequesAdicionales.reduce((sum, cheque) => sum + parseFloat(cheque.importe || cheque.monto || 0), 0)
+                totalCheques += montoCheques
+                movimientosCargados.push(...chequesAdicionales)
+                console.log(`💰 [NAFA] Depósito ${depositId}: ${chequesAdicionales.length} cheques por $${montoCheques} (desde llamada adicional)`)
+              }
+            } catch (error) {
+              console.error(`❌ [NAFA] Error obteniendo cheques adicionales para ${depositId}:`, error)
+            }
           }
 
-          // Obtener retenciones directamente del depósito (ya vienen en la respuesta principal)
+          // Primero intentar obtener directamente del depósito (ya vienen en la respuesta principal)
           if (deposit.retenciones && Array.isArray(deposit.retenciones) && deposit.retenciones.length > 0) {
+            reparto.retenciones.push(...deposit.retenciones)
             const montoRetenciones = deposit.retenciones.reduce((sum, retencion) => sum + parseFloat(retencion.importe || retencion.monto || 0), 0)
             totalRetenciones += montoRetenciones
             movimientosCargados.push(...deposit.retenciones)
             console.log(`💰 [NAFA] Depósito ${depositId}: ${deposit.retenciones.length} retenciones por $${montoRetenciones} (desde respuesta principal)`)
+          } else {
+            // Si no vienen en la respuesta principal, hacer llamada específica como en Jumillano
+            try {
+              const retencionesAdicionales = await this.getRetenciones(depositId)
+              if (retencionesAdicionales && retencionesAdicionales.length > 0) {
+                reparto.retenciones.push(...retencionesAdicionales)
+                const montoRetenciones = retencionesAdicionales.reduce((sum, retencion) => sum + parseFloat(retencion.importe || retencion.monto || 0), 0)
+                totalRetenciones += montoRetenciones
+                movimientosCargados.push(...retencionesAdicionales)
+                console.log(`💰 [NAFA] Depósito ${depositId}: ${retencionesAdicionales.length} retenciones por $${montoRetenciones} (desde llamada adicional)`)
+              }
+            } catch (error) {
+              console.error(`❌ [NAFA] Error obteniendo retenciones adicionales para ${depositId}:`, error)
+            }
           }
+        }
+
+        // Si hay movimientos, crear el movimiento financiero principal del reparto (como en Jumillano)
+        if (totalCheques > 0 || totalRetenciones > 0) {
+          reparto.movimientoFinanciero = {
+            tipo: 'MIXTO',
+            totalCheques: reparto.cheques.length,
+            totalRetenciones: reparto.retenciones.length,
+            montoTotal: totalCheques + totalRetenciones,
+            cheques: reparto.cheques,
+            retenciones: reparto.retenciones
+          }
+          
+          console.log(`💰 [NAFA] Reparto ${reparto.idReparto} - Movimiento financiero creado:`, {
+            cheques: reparto.cheques.length,
+            retenciones: reparto.retenciones.length,
+            montoTotal: totalCheques + totalRetenciones
+          })
         }
 
         // Actualizar el monto real sumando los movimientos

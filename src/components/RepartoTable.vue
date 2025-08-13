@@ -283,6 +283,7 @@
             :class="{ 'animate-row': true }"
             :style="{ animationDelay: `${index * 50}ms` }"
             @edit="$emit('edit', $event)"
+            @edit-movement="$emit('edit-movement', $event)"
             @delete-movement="handleDeleteMovement"
             @view-movements="handleViewMovements"
             @toggle-comprobantes="handleToggleComprobantes"
@@ -413,6 +414,7 @@
       @close="closeMovimientosModal"
       @edit="handleEditFromModal"
       @create="handleCreateFromModal"
+      @edit-movement="$emit('edit-movement', $event)"
       @delete-movement="handleDeleteMovement"
       @delete-all-movements="handleDeleteAllMovements"
     />
@@ -439,7 +441,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['refresh', 'edit', 'delete-movement', 'delete-all-movements', 'toggle-comprobantes', 'estado-actualizado'])
+const emit = defineEmits(['refresh', 'edit', 'edit-movement', 'delete-movement', 'delete-all-movements', 'toggle-comprobantes', 'estado-actualizado'])
 
 // Estados para el modal de movimientos
 const showMovimientosModal = ref(false)

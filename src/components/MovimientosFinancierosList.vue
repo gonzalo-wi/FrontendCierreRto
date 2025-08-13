@@ -81,6 +81,15 @@
                   <div class="item-actions">
                     <span class="item-amount">{{ formatCurrency(cheque.importe || cheque.monto || 0) }}</span>
                     <button 
+                      @click="editMovement('cheque', cheque, index)" 
+                      class="edit-button"
+                      title="Editar cheque"
+                    >
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                    <button 
                       @click="deleteMovement('cheque', cheque, index)" 
                       class="delete-button"
                       title="Eliminar cheque"
@@ -141,6 +150,15 @@
                   <span class="item-title">{{ retencion.concepto || 'Retención' }} N° {{ retencion.nro_retencion || retencion.numero || 'S/N' }}</span>
                   <div class="item-actions">
                     <span class="item-amount">{{ formatCurrency(retencion.importe || retencion.monto || 0) }}</span>
+                    <button 
+                      @click="editMovement('retencion', retencion, index)" 
+                      class="edit-button"
+                      title="Editar retención"
+                    >
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
                     <button 
                       @click="deleteMovement('retencion', retencion, index)" 
                       class="delete-button"
@@ -216,7 +234,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['delete-movement'])
+const emit = defineEmits(['delete-movement', 'edit-movement'])
 
 const isExpanded = ref(false)
 
@@ -285,6 +303,42 @@ const getTipoIcon = (tipo) => {
     'RETENCION': '📋'
   }
   return icons[tipo] || '💼'
+}
+
+// Función para manejar edición de movimientos
+const editMovement = async (tipo, movimiento, index) => {
+  console.log(`✏️ [MovFinList] ============ INICIO EDIT MOVEMENT ============`)
+  console.log(`✏️ [MovFinList] tipo recibido:`, tipo)
+  console.log(`✏️ [MovFinList] movimiento recibido:`, JSON.stringify(movimiento, null, 2))
+  console.log(`✏️ [MovFinList] index recibido:`, index)
+  console.log(`✏️ [MovFinList] props.reparto:`, props.reparto?.idReparto)
+  
+  // Analizar el objeto movimiento en detalle
+  console.log(`🔍 [MovFinList] ============ ANALIZANDO MOVIMIENTO PARA EDITAR ============`)
+  if (movimiento) {
+    console.log(`🔍 [MovFinList] Propiedades del objeto movimiento:`)
+    Object.keys(movimiento).forEach(key => {
+      console.log(`🔍 [MovFinList]   - ${key}: ${movimiento[key]} (${typeof movimiento[key]})`)
+    })
+  } else {
+    console.error('❌ [MovFinList] movimiento es null/undefined!')
+  }
+  
+  // Crear el payload del evento
+  const eventPayload = {
+    tipo,
+    movimiento,
+    index,
+    reparto: props.reparto
+  }
+  
+  console.log(`✏️ [MovFinList] ============ EMITIENDO EVENTO EDIT ============`)
+  console.log(`✏️ [MovFinList] Payload del evento:`, JSON.stringify(eventPayload, null, 2))
+  
+  // Emitir evento para que el componente padre maneje la edición
+  emit('edit-movement', eventPayload)
+  
+  console.log(`✏️ [MovFinList] ✅ Evento 'edit-movement' emitido correctamente`)
 }
 
 // Función para manejar eliminación de movimientos
@@ -725,6 +779,35 @@ const deleteMovement = async (tipo, movimiento, index) => {
   color: #059669;
   font-family: 'SF Mono', monospace;
   white-space: nowrap;
+}
+
+.edit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+  margin-right: 4px;
+}
+
+.edit-button:hover {
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+  color: #0284c7;
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.edit-button svg {
+  width: 14px;
+  height: 14px;
 }
 
 .delete-button {

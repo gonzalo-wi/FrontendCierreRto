@@ -8,6 +8,7 @@
     :reparto="reparto"
     :compact="true"
     @delete-movement="handleDeleteMovement"
+    @edit-movement="handleEditMovement"
   />
 
   <!-- Vista tradicional para un solo movimiento o movimiento legacy -->
@@ -94,12 +95,18 @@ const props = defineProps({
 })
 
 // Definir emits
-const emit = defineEmits(['delete-movement'])
+const emit = defineEmits(['delete-movement', 'edit-movement'])
 
 // Handler para reenviar eventos de eliminación al padre
 const handleDeleteMovement = (eventData) => {
   console.log('🗑️ [MovFinanciero] Reenviando evento delete-movement al padre:', eventData)
   emit('delete-movement', eventData)
+}
+
+// Handler para reenviar eventos de edición al padre
+const handleEditMovement = (eventData) => {
+  console.log('✏️ [MovFinanciero] Reenviando evento edit-movement al padre:', eventData)
+  emit('edit-movement', eventData)
 }
 
 // Computadas para detectar múltiples movimientos
