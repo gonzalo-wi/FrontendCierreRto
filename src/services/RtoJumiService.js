@@ -548,7 +548,7 @@ export default {
   async updateCheque(depositId, chequeId, chequeData) {
     try {
       console.log(`📝 [JUMI] Actualizando cheque ${chequeId} del depósito ${depositId}:`, chequeData)
-      const response = await apiClient.put(`/deposits/${depositId}/cheques/${chequeId}`, chequeData)
+      const response = await apiClient.put(`/cheques-retenciones/cheques/${chequeId}`, chequeData)
       console.log(`✅ [JUMI] Cheque actualizado exitosamente:`, response.data)
       return response.data
     } catch (error) {
@@ -650,7 +650,7 @@ export default {
   async updateRetencion(depositId, retencionId, retencionData) {
     try {
       console.log(`📝 [JUMI] Actualizando retención ${retencionId} del depósito ${depositId}:`, retencionData)
-      const response = await apiClient.put(`/deposits/${depositId}/retenciones/${retencionId}`, retencionData)
+      const response = await apiClient.put(`/cheques-retenciones/retenciones/${retencionId}`, retencionData)
       console.log(`✅ [JUMI] Retención actualizada exitosamente:`, response.data)
       return response.data
     } catch (error) {

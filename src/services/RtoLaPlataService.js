@@ -784,7 +784,7 @@ export default {
   async updateCheque(depositId, chequeId, chequeData) {
     try {
       console.log(`📝 [LA PLATA] Actualizando cheque ${chequeId} del depósito ${depositId}:`, chequeData)
-      const response = await apiClient.put(`/deposits/${depositId}/cheques/${chequeId}`, chequeData)
+      const response = await apiClient.put(`/cheques-retenciones/cheques/${chequeId}`, chequeData)
       console.log(`✅ [LA PLATA] Cheque actualizado exitosamente:`, response.data)
       return response.data
     } catch (error) {
@@ -856,7 +856,7 @@ export default {
   async updateRetencion(depositId, retencionId, retencionData) {
     try {
       console.log(`📝 [LA PLATA] Actualizando retención ${retencionId} del depósito ${depositId}:`, retencionData)
-      const response = await apiClient.put(`/deposits/${depositId}/retenciones/${retencionId}`, retencionData)
+      const response = await apiClient.put(`/cheques-retenciones/retenciones/${retencionId}`, retencionData)
       console.log(`✅ [LA PLATA] Retención actualizada exitosamente:`, response.data)
       return response.data
     } catch (error) {

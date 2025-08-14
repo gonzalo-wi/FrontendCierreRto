@@ -167,9 +167,9 @@
         <RepartoTable 
           :title="`Repartos ${title}`"
           :repartos="repartos"
+          :service="currentService"
           @refresh="fetchRepartos"
           @edit="openEditModal"
-          @edit-movement="openEditModalWithData"
           @delete-movement="deleteMovement"
           @delete-all-movements="deleteAllMovements"
           @view-movements="openMovimientosModal"
@@ -240,22 +240,12 @@
 
       <!-- Modal de edición -->
       <EditMovementModal
-        :key="`edit-${selectedReparto?.idReparto || 'new'}-${modalMovimientoTipo}-${Date.now()}`"
         :is-visible="showModal"
         :reparto="selectedReparto"
         :saving="saving"
         :movimiento-tipo="modalMovimientoTipo"
-        :movimiento-data="modalMovimientoData"
         @close="closeModal"
         @save="saveMovement"
-      />
-
-      <!-- Modal de selección de movimiento para editar -->
-      <SelectMovementModal
-        :is-visible="showSelectMovementModal"
-        :reparto="selectedReparto"
-        @close="closeSelectMovementModal"
-        @select-movement="handleSelectMovementForEdit"
       />
 
       <!-- Modal de Movimientos Financieros -->
@@ -286,13 +276,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { config } from '../config/config.js'
 import { useAuth } from '../composables/useAuth.js'
 import RepartoTable from '../components/RepartoTable.vue'
 import ComprobantesModal from '../components/ComprobantesModal.vue'
 import EditMovementModal from '../components/EditMovementModal.vue'
-import SelectMovementModal from '../components/SelectMovementModal.vue'
 import MovimientosFinancierosModal from '../components/MovimientosFinancierosModal.vue'
 import DateSelector from '../components/DateSelector.vue'
 import TotalsView from '../components/TotalsView.vue'
@@ -324,11 +313,9 @@ const isFetching = ref(false) // Flag para prevenir llamadas múltiples
 
 // Estado del modal
 const showModal = ref(false)
-const showSelectMovementModal = ref(false)
 const selectedReparto = ref(null)
 const saving = ref(false)
 const modalMovimientoTipo = ref(null) // cheque | retencion | null
-const modalMovimientoData = ref(null) // datos del movimiento para editar
 
 // Estados para modal de comprobantes
 const showComprobantesModal = ref(false)
@@ -735,164 +722,17 @@ const openEditModal = (repartoOrPayload, movimientoTipoArg) => {
     movimientoTipo = repartoOrPayload.movimientoTipo
   }
   
-  console.log('🔥 [RepartoView] Abriendo modal con:', { reparto: reparto?.idReparto, movimientoTipo })
-  console.log('🔍 [RepartoView] reparto completo:', JSON.stringify(reparto, null, 2))
-  
+  console.log('🔥 Abriendo modal con:', { reparto: reparto?.idReparto, movimientoTipo })
   selectedReparto.value = reparto
-  
-  // Si el reparto tiene movimientos existentes, abrir modal de selección
-  if (reparto?.movimientoFinanciero && 
-      ((reparto.movimientoFinanciero.cheques && reparto.movimientoFinanciero.cheques.length > 0) ||
-       (reparto.movimientoFinanciero.retenciones && reparto.movimientoFinanciero.retenciones.length > 0))) {
-    
-    console.log('✏️ [RepartoView] Reparto tiene movimientos existentes, abriendo modal de SELECCIÓN')
-    showSelectMovementModal.value = true
-    
-  } else {
-    // Si no tiene movimientos, abrir modal de creación normal
-    console.log('➕ [RepartoView] Reparto sin movimientos, abriendo modal de CREACIÓN')
-    modalMovimientoTipo.value = movimientoTipo || null
-    modalMovimientoData.value = null
-    showModal.value = true
-  }
-}
-
-// Función específica para abrir modal con datos específicos del movimiento
-const openEditModalWithData = (eventPayload) => {
-  console.log('✏️ [RepartoView] ============ ABRIENDO MODAL CON DATOS ESPECÍFICOS ============')
-  console.log('✏️ [RepartoView] eventPayload recibido:', JSON.stringify(eventPayload, null, 2))
-  
-  const { tipo, movimiento, index, reparto } = eventPayload
-  
-  console.log('✏️ [RepartoView] Datos extraídos del payload:')
-  console.log('✏️ [RepartoView]   - tipo:', tipo)
-  console.log('✏️ [RepartoView]   - movimiento:', JSON.stringify(movimiento, null, 2))
-  console.log('✏️ [RepartoView]   - index:', index)
-  console.log('✏️ [RepartoView]   - reparto:', reparto?.idReparto)
-  
-  // Validar que el reparto existe antes de continuar
-  if (!reparto) {
-    console.error('❌ [RepartoView] ERROR: reparto es null en eventPayload')
-    console.error('❌ [RepartoView] eventPayload completo:', eventPayload)
-    alert('Error: No se pudo identificar el reparto. Intente de nuevo.')
-    return
-  }
-  
-  // Configurar el modal con los datos específicos
-  selectedReparto.value = reparto
-  modalMovimientoTipo.value = tipo === 'cheque' ? 'CHEQUE' : 'RETENCION'
-  
-  // Preparar los datos del movimiento para el modal
-  const movimientoData = {
-    tipo: tipo === 'cheque' ? 'CHEQUE' : 'RETENCION',
-    ...movimiento, // Spread todas las propiedades del movimiento específico
-    index, // Agregar el índice para poder identificar el movimiento posteriormente
-    reparto: reparto // AGREGAR EL REPARTO DIRECTAMENTE EN LOS DATOS DEL MOVIMIENTO
-  }
-  
-  modalMovimientoData.value = movimientoData
-  
-  console.log('✏️ [RepartoView] Modal configurado con:')
-  console.log('✏️ [RepartoView]   - selectedReparto:', selectedReparto.value?.idReparto)
-  console.log('✏️ [RepartoView]   - modalMovimientoTipo:', modalMovimientoTipo.value)
-  console.log('✏️ [RepartoView]   - modalMovimientoData:', JSON.stringify(modalMovimientoData.value, null, 2))
-  
-  // Verificar que selectedReparto se configuró correctamente
-  console.log('✏️ [RepartoView] ============ VERIFICACIÓN FINAL ============')
-  console.log('✏️ [RepartoView] selectedReparto.value configurado:', selectedReparto.value?.idReparto || 'NULL!')
-  console.log('✏️ [RepartoView] showModal será:', true)
-  
+  modalMovimientoTipo.value = movimientoTipo || null
   showModal.value = true
-  
-  // Verificar después de un tick que el reparto sigue ahí
-  nextTick(() => {
-    console.log('✏️ [RepartoView] [POST-TICK] selectedReparto.value:', selectedReparto.value?.idReparto || 'NULL!')
-  })
-  
-  console.log('✏️ [RepartoView] ✅ Modal abierto con datos específicos del movimiento')
-}
-
-// Función para cerrar el modal de selección de movimiento
-const closeSelectMovementModal = () => {
-  console.log('🔒 [RepartoView] Cerrando modal de selección de movimiento')
-  showSelectMovementModal.value = false
-  // NO limpiar selectedReparto aquí porque handleSelectMovementForEdit lo necesita
-  // selectedReparto.value = null 
-}
-
-// Función para manejar la selección de un movimiento para editar
-const handleSelectMovementForEdit = (selectedData) => {
-  console.log('✏️ [RepartoView] ============ MOVIMIENTO SELECCIONADO PARA EDITAR ============')
-  console.log('✏️ [RepartoView] selectedData:', JSON.stringify(selectedData, null, 2))
-  
-  const { tipo, movimiento, index, reparto } = selectedData
-  
-  console.log('✏️ [RepartoView] Datos extraídos del payload:')
-  console.log('✏️ [RepartoView]   - tipo:', tipo)
-  console.log('✏️ [RepartoView]   - movimiento:', JSON.stringify(movimiento, null, 2))
-  console.log('✏️ [RepartoView]   - index:', index)
-  console.log('✏️ [RepartoView]   - reparto:', reparto?.idReparto)
-  
-  // Validar que el reparto existe antes de continuar
-  if (!reparto) {
-    console.error('❌ [RepartoView] ERROR: reparto es null en selectedData')
-    console.error('❌ [RepartoView] selectedData completo:', selectedData)
-    alert('Error: No se pudo identificar el reparto. Intente de nuevo.')
-    return
-  }
-  
-  // Cerrar el modal de selección
-  closeSelectMovementModal()
-  
-  // Configurar el modal de edición con los datos específicos
-  selectedReparto.value = reparto
-  modalMovimientoTipo.value = tipo
-  
-  // Preparar los datos del movimiento para el modal
-  const movimientoData = {
-    tipo,
-    ...movimiento, // Spread todas las propiedades del movimiento específico
-    index, // Agregar el índice para poder identificar el movimiento posteriormente
-    reparto: reparto // AGREGAR EL REPARTO DIRECTAMENTE EN LOS DATOS DEL MOVIMIENTO
-  }
-  
-  modalMovimientoData.value = movimientoData
-  
-  console.log('✏️ [RepartoView] Modal de edición configurado con:')
-  console.log('✏️ [RepartoView]   - selectedReparto:', selectedReparto.value?.idReparto)
-  console.log('✏️ [RepartoView]   - modalMovimientoTipo:', modalMovimientoTipo.value)
-  console.log('✏️ [RepartoView]   - modalMovimientoData:', JSON.stringify(modalMovimientoData.value, null, 2))
-  
-  // Verificar que selectedReparto se configuró correctamente
-  console.log('✏️ [RepartoView] ============ VERIFICACIÓN FINAL (SelectModal) ============')
-  console.log('✏️ [RepartoView] selectedReparto.value configurado:', selectedReparto.value?.idReparto || 'NULL!')
-  console.log('✏️ [RepartoView] showModal será:', true)
-  
-  // Abrir el modal de edición
-  showModal.value = true
-  
-  // Verificar después de un tick que el reparto sigue ahí
-  nextTick(() => {
-    console.log('✏️ [RepartoView] [POST-TICK SelectModal] selectedReparto.value:', selectedReparto.value?.idReparto || 'NULL!')
-  })
-  
-  console.log('✏️ [RepartoView] ✅ Modal de edición abierto con movimiento específico')
 }
 
 // Función para cerrar el modal
 const closeModal = () => {
-  console.log('🔒 [RepartoView] Cerrando modal principal')
-  console.log('🔒 [RepartoView] selectedReparto antes de limpiar:', selectedReparto.value?.idReparto)
   showModal.value = false
-  
-  // Usar nextTick para asegurar que el modal se cierre completamente antes de limpiar
-  // Esto previene que se pierda el reparto durante operaciones del modal
-  nextTick(() => {
-    selectedReparto.value = null
-    modalMovimientoTipo.value = null
-    modalMovimientoData.value = null
-    console.log('🔒 [RepartoView] Variables del modal limpiadas')
-  })
+  selectedReparto.value = null
+  modalMovimientoTipo.value = null
 }
 
 // Funciones para modal de comprobantes
@@ -907,9 +747,18 @@ const handleToggleComprobantes = (event) => {
 
 // Función para abrir modal de movimientos financieros
 const openMovimientosModal = (reparto) => {
-  console.log('💰 Abriendo modal de movimientos financieros para:', reparto?.idReparto)
+  console.log('�️ [RepartoView] ========== CLICK EN OJITO DETECTADO ==========')
+  console.log('👁️ [RepartoView] Abriendo modal de movimientos financieros para:', reparto?.idReparto)
+  console.log('👁️ [RepartoView] Reparto completo:', JSON.stringify(reparto, null, 2))
+  console.log('👁️ [RepartoView] selectedRepartoMovimientos antes:', selectedRepartoMovimientos.value?.idReparto || 'null')
+  console.log('👁️ [RepartoView] showMovimientosModal antes:', showMovimientosModal.value)
+  
   selectedRepartoMovimientos.value = reparto
   showMovimientosModal.value = true
+  
+  console.log('👁️ [RepartoView] selectedRepartoMovimientos después:', selectedRepartoMovimientos.value?.idReparto)
+  console.log('👁️ [RepartoView] showMovimientosModal después:', showMovimientosModal.value)
+  console.log('👁️ [RepartoView] ========== DEBERÍA ABRIR MODAL AHORA ==========')
 }
 
 // Función para manejar actualización de estado de repartos
@@ -934,14 +783,21 @@ const closeComprobantesModal = () => {
 }
 
 const closeMovimientosModal = () => {
+  console.log('🔧 [RepartoView] Cerrando modal movimientos - refrescando datos')
   showMovimientosModal.value = false
   selectedRepartoMovimientos.value = null
+  // Recargar datos para asegurar que estén actualizados la próxima vez
+  fetchRepartos()
 }
 
-const onMovimientosUpdated = () => {
+const onMovimientosUpdated = async () => {
   // Recargar los repartos para mostrar los cambios
-  console.log('📈 Movimientos financieros actualizados, recargando datos...')
-  fetchRepartos()
+  console.log('📈 [RepartoView] Movimientos financieros actualizados, recargando datos INMEDIATAMENTE...')
+  
+  // Forzar recarga inmediata
+  await fetchRepartos()
+  
+  console.log('✅ [RepartoView] Datos recargados exitosamente tras actualización de movimientos')
 }
 
 // Función para guardar el movimiento
@@ -984,34 +840,107 @@ const saveMovement = async (movementData) => {
       console.log('🌐 [REPARTO_VIEW] Modo producción: creando movimiento específico')
       console.log('🔍 [REPARTO_VIEW] movementData completo:', movementData)
       
-      // Crear cheque o retención según la estructura que viene del modal
+      // Crear o actualizar cheque / retención según existencia previa
+      const depositoExistente = primerDeposito
+      const chequesExistentes = Array.isArray(depositoExistente?.cheques) ? depositoExistente.cheques : []
+      const retencionesExistentes = Array.isArray(depositoExistente?.retenciones) ? depositoExistente.retenciones : []
+
       if (movementData.cheques && Array.isArray(movementData.cheques) && movementData.cheques.length > 0) {
-        console.log('➕ [REPARTO_VIEW] Creando cheque(s) desde modal')
-        
+        console.log('🔁 [REPARTO_VIEW] Procesando cheque(s) (crear o actualizar)')
         for (const cheque of movementData.cheques) {
-          // Estructura simplificada que espera el backend
-          const chequeData = {
-            numero: cheque.nro_cheque,           // REQUERIDO - string
-            banco: cheque.banco,                 // REQUERIDO - string  
-            importe: parseFloat(cheque.importe), // REQUERIDO - number
-            fecha_cobro: cheque.fecha            // OPCIONAL - string
+          const numeroEntrada = String(cheque.nro_cheque).trim()
+          // Estructura esperada
+            const chequeData = {
+            numero: numeroEntrada,
+            banco: cheque.banco,
+            importe: parseFloat(cheque.importe),
+            fecha_cobro: cheque.fecha
           }
-          console.log('📄 [REPARTO_VIEW] Creando cheque con estructura del backend:', chequeData)
-          await props.service.createCheque(depositId, chequeData)
+
+          // PRIORIZAR ID DEL BACKEND si está disponible (edición)
+          if (cheque.id) {
+            const chequeId = cheque.id
+            console.log(`✏️ [REPARTO_VIEW] Actualizando cheque por ID backend=${chequeId}`, chequeData)
+            try {
+              await props.service.updateCheque(depositId, chequeId, chequeData)
+            } catch (e) {
+              if (e?.response?.status === 404) {
+                console.warn('⚠️ [REPARTO_VIEW] PUT cheque 404, creando en su lugar')
+                await props.service.createCheque(depositId, chequeData)
+              } else { throw e }
+            }
+            continue // Saltar búsqueda por número
+          }
+
+          // FALLBACK: Buscar coincidencia existente por numero
+          const existente = chequesExistentes.find(c => {
+            const nums = [c.numero, c.nro_cheque, c.cheque_numero].filter(Boolean).map(x => String(x).trim())
+            return nums.includes(numeroEntrada)
+          })
+
+          if (existente && (existente.id || existente.cheque_id)) {
+            const chequeId = existente.id || existente.cheque_id
+            console.log(`✏️ [REPARTO_VIEW] Actualizando cheque existente numero=${numeroEntrada} id=${chequeId}`, chequeData)
+            try {
+              await props.service.updateCheque(depositId, chequeId, chequeData)
+            } catch (e) {
+              if (e?.response?.status === 404) {
+                console.warn('⚠️ [REPARTO_VIEW] PUT cheque 404, creando en su lugar')
+                await props.service.createCheque(depositId, chequeData)
+              } else { throw e }
+            }
+          } else {
+            console.log('➕ [REPARTO_VIEW] Creando cheque nuevo:', chequeData)
+            await props.service.createCheque(depositId, chequeData)
+          }
         }
       } else if (movementData.retenciones && Array.isArray(movementData.retenciones) && movementData.retenciones.length > 0) {
-        console.log('➕ [REPARTO_VIEW] Creando retención(es) desde modal')
-        
+        console.log('🔁 [REPARTO_VIEW] Procesando retención(es) (crear o actualizar)')
         for (const retencion of movementData.retenciones) {
-          // Estructura que espera el backend según la documentación
+          const numeroEntrada = String(retencion.nro_retencion).trim()
           const retencionData = {
-            numero: parseInt(retencion.nro_retencion),    // REQUERIDO - int (Número de retención)
-            importe: parseFloat(retencion.importe),       // REQUERIDO - float
-            concepto: retencion.concepto || "RIB",        // OPCIONAL - string (default: "RIB")
-            numero_cuenta: parseInt(retencion.nrocta)     // REQUERIDO - int (Número de cliente/cuenta)
+            numero: numeroEntrada,
+            importe: parseFloat(retencion.importe),
+            concepto: retencion.concepto || 'RIB',
+            numero_cuenta: String(retencion.nrocta || retencion.nro_cuenta || '')
           }
-          console.log('⚠️ [REPARTO_VIEW] Creando retención con estructura del backend:', retencionData)
-          await props.service.createRetencion(depositId, retencionData)
+
+          // PRIORIZAR ID DEL BACKEND si está disponible (edición)
+          if (retencion.id) {
+            const retencionId = retencion.id
+            console.log(`✏️ [REPARTO_VIEW] Actualizando retención por ID backend=${retencionId}`, retencionData)
+            try {
+              await props.service.updateRetencion(depositId, retencionId, retencionData)
+            } catch (e) {
+              if (e?.response?.status === 404) {
+                console.warn('⚠️ [REPARTO_VIEW] PUT retención 404, creando en su lugar')
+                await props.service.createRetencion(depositId, retencionData)
+              } else { throw e }
+            }
+            continue // Saltar búsqueda por número
+          }
+
+          // FALLBACK: buscar por número si no hay ID (compatibilidad)
+          const existente = retencionesExistentes.find(r => {
+            const nums = [r.numero, r.nro_retencion, r.retencion_numero].filter(Boolean).map(x => String(x).trim())
+            return nums.includes(numeroEntrada)
+          })
+
+          if (existente && (existente.id || existente.retencion_id)) {
+            const retencionId = existente.id || existente.retencion_id
+            console.log(`✏️ [REPARTO_VIEW] Actualizando retención existente numero=${numeroEntrada} id=${retencionId}`, retencionData)
+            try {
+              await props.service.updateRetencion(depositId, retencionId, retencionData)
+            } catch (e) {
+              if (e?.response?.status === 404) {
+                console.warn('⚠️ [REPARTO_VIEW] PUT retención 404, creando en su lugar')
+                await props.service.createRetencion(depositId, retencionData)
+              } else { throw e }
+            }
+          } else {
+            console.log('➕ [REPARTO_VIEW] Creando retención nueva:', retencionData)
+            await props.service.createRetencion(depositId, retencionData)
+          }
         }
       } else {
         throw new Error(`Estructura de movimiento no válida: ${JSON.stringify(movementData)}`)
@@ -1185,34 +1114,54 @@ const deleteMovement = async (eventData) => {
       // Obtener el identificador específico según el tipo
       let identificador = null
       if (tipo === 'cheque') {
-        identificador = movimiento.nro_cheque || movimiento.numero
+        // PRIORIZAR ID único del backend
+        identificador = movimiento.id || movimiento.cheque_id
+        
         console.log('💰 [RepartoView] ============ PROCESANDO CHEQUE ============')
+        console.log('💰 [RepartoView] movimiento.id:', movimiento.id)
+        console.log('💰 [RepartoView] movimiento.cheque_id:', movimiento.cheque_id)
         console.log('💰 [RepartoView] movimiento.nro_cheque:', movimiento.nro_cheque)
         console.log('💰 [RepartoView] movimiento.numero:', movimiento.numero)
-        console.log('💰 [RepartoView] identificador final:', identificador)
+        console.log('💰 [RepartoView] identificador final (ID):', identificador)
         
         if (!identificador) {
-          console.error('❌ [RepartoView] El cheque no tiene número identificador')
-          console.error('❌ [RepartoView] Objeto cheque completo:', JSON.stringify(movimiento, null, 2))
-          throw new Error('El cheque no tiene número identificador (nro_cheque o numero)')
+          // FALLBACK: usar número solo si no hay ID
+          identificador = movimiento.nro_cheque || movimiento.numero
+          console.warn('⚠️ [RepartoView] No hay ID único, usando número como fallback:', identificador)
         }
-        console.log(`🗑️ [RepartoView] ✅ Eliminando cheque N° ${identificador} para deposit_id: ${depositId}`)
+        
+        if (!identificador) {
+          console.error('❌ [RepartoView] El cheque no tiene ID ni número identificador')
+          console.error('❌ [RepartoView] Objeto cheque completo:', JSON.stringify(movimiento, null, 2))
+          throw new Error('El cheque no tiene ID ni número identificador')
+        }
+        console.log(`🗑️ [RepartoView] ✅ Eliminando cheque ID/N° ${identificador} para deposit_id: ${depositId}`)
         console.log(`🌐 [RepartoView] ✅ HACIENDO: DELETE /deposits/${depositId}/cheques/${identificador}`)
         result = await props.service.deleteCheque(depositId, identificador)
         
       } else if (tipo === 'retencion') {
-        identificador = movimiento.nro_retencion || movimiento.numero
+        // PRIORIZAR ID único del backend
+        identificador = movimiento.id || movimiento.retencion_id
+        
         console.log('⚠️ [RepartoView] ============ PROCESANDO RETENCION ============')
+        console.log('⚠️ [RepartoView] movimiento.id:', movimiento.id)
+        console.log('⚠️ [RepartoView] movimiento.retencion_id:', movimiento.retencion_id)
         console.log('⚠️ [RepartoView] movimiento.nro_retencion:', movimiento.nro_retencion)
         console.log('⚠️ [RepartoView] movimiento.numero:', movimiento.numero)
-        console.log('⚠️ [RepartoView] identificador final:', identificador)
+        console.log('⚠️ [RepartoView] identificador final (ID):', identificador)
         
         if (!identificador) {
-          console.error('❌ [RepartoView] La retención no tiene número identificador')
-          console.error('❌ [RepartoView] Objeto retención completo:', JSON.stringify(movimiento, null, 2))
-          throw new Error('La retención no tiene número identificador (nro_retencion o numero)')
+          // FALLBACK: usar número solo si no hay ID
+          identificador = movimiento.nro_retencion || movimiento.numero
+          console.warn('⚠️ [RepartoView] No hay ID único, usando número como fallback:', identificador)
         }
-        console.log(`🗑️ [RepartoView] ✅ Eliminando retención N° ${identificador} para deposit_id: ${depositId}`)
+        
+        if (!identificador) {
+          console.error('❌ [RepartoView] La retención no tiene ID ni número identificador')
+          console.error('❌ [RepartoView] Objeto retención completo:', JSON.stringify(movimiento, null, 2))
+          throw new Error('La retención no tiene ID ni número identificador')
+        }
+        console.log(`🗑️ [RepartoView] ✅ Eliminando retención ID/N° ${identificador} para deposit_id: ${depositId}`)
         console.log(`🌐 [RepartoView] ✅ HACIENDO: DELETE /deposits/${depositId}/retenciones/${identificador}`)
         result = await props.service.deleteRetencion(depositId, identificador)
         
@@ -1229,8 +1178,10 @@ const deleteMovement = async (eventData) => {
       
       // Mostrar mensaje de éxito
       const tipoTexto = eventData.tipo === 'cheque' ? 'cheque' : 'retención'
+      const id = eventData.movimiento?.id || eventData.movimiento?.cheque_id || eventData.movimiento?.retencion_id
       const numero = eventData.movimiento?.nro_cheque || eventData.movimiento?.nro_retencion || eventData.movimiento?.numero || 'S/N'
-      alert(`${tipoTexto.charAt(0).toUpperCase() + tipoTexto.slice(1)} N° ${numero} eliminado exitosamente`)
+      const identificadorTexto = id ? `ID ${id}` : `N° ${numero}`
+      alert(`${tipoTexto.charAt(0).toUpperCase() + tipoTexto.slice(1)} ${identificadorTexto} eliminado exitosamente`)
     }
     
   } catch (error) {
@@ -1326,18 +1277,6 @@ const onFechaSeleccionada = (fechaData) => {
 onMounted(() => {
   fetchRepartos()
 })
-
-// Watcher para detectar cambios en selectedReparto
-watch(selectedReparto, (newSelectedReparto, oldSelectedReparto) => {
-  console.log('🎯 [RepartoView] ============ CAMBIO EN SELECTED_REPARTO ============')
-  console.log('🎯 [RepartoView] oldSelectedReparto:', oldSelectedReparto?.idReparto || 'null')
-  console.log('🎯 [RepartoView] newSelectedReparto:', newSelectedReparto?.idReparto || 'null')
-  
-  if (!newSelectedReparto && oldSelectedReparto) {
-    console.warn('⚠️ [RepartoView] ALERTA: selectedReparto cambió de algo a NULL!')
-    console.trace('⚠️ [RepartoView] Stack trace del cambio a NULL:')
-  }
-}, { immediate: true })
 
 // Watcher para detectar cambios en repartos
 watch(repartos, (newRepartos, oldRepartos) => {

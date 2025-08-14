@@ -1,20 +1,23 @@
 <template>
-  <div v-if="isVisible" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+  <!-- {{ console.log('🖼️ [MovFinModal] TEMPLATE RENDERING - isVisible:', isVisible) }} -->
+  <div v-if="isVisible" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-2xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-hidden">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 flex justify-between items-center">
-        <div>
-          <h2 class="text-2xl font-bold text-white">Movimientos Financieros</h2>
+      <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold">💰 Movimientos Financieros</h2>
+          <button 
+            @click="$emit('close')"
+            class="text-white hover:text-gray-200 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div v-if="reparto">
           <p class="text-blue-100 text-sm">{{ reparto?.idReparto }} - Cheques y Retenciones</p>
         </div>
-        <button 
-          @click="$emit('close')" 
-          class="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all duration-200"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
       </div>
 
       <div class="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
@@ -111,10 +114,19 @@
             <div 
               v-for="cheque in cheques" 
               :key="cheque.id"
-              class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-200"
+              @click="editMovimiento(cheque, 'cheque')"
+              class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-blue-300 cursor-pointer transition-all duration-200"
+              title="Haz clic para editar este cheque"
             >
               <div class="flex justify-between items-start">
                 <div class="flex-1">
+                  <!-- Indicador de que es clickeable -->
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      CHEQUE
+                    </span>
+                    <span class="text-xs text-gray-400 italic">Click para editar</span>
+                  </div>
                   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <p class="text-sm text-gray-500">Número de Cheque</p>
@@ -140,7 +152,7 @@
                 </div>
                 <div class="flex space-x-2 ml-4">
                   <button 
-                    @click="editMovimiento(cheque, 'cheque')"
+                    @click.stop="editMovimiento(cheque, 'cheque')"
                     class="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-all duration-200"
                     title="Editar"
                   >
@@ -149,7 +161,7 @@
                     </svg>
                   </button>
                   <button 
-                    @click="deleteMovimiento(cheque, 'cheque')"
+                    @click.stop="deleteMovimiento(cheque, 'cheque')"
                     class="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all duration-200"
                     title="Eliminar"
                   >
@@ -175,10 +187,19 @@
             <div 
               v-for="retencion in retenciones" 
               :key="retencion.id"
-              class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-200"
+              @click="editMovimiento(retencion, 'retencion')"
+              class="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md hover:border-orange-300 cursor-pointer transition-all duration-200"
+              title="Haz clic para editar esta retención"
             >
               <div class="flex justify-between items-start">
                 <div class="flex-1">
+                  <!-- Indicador de que es clickeable -->
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                      RETENCIÓN
+                    </span>
+                    <span class="text-xs text-gray-400 italic">Click para editar</span>
+                  </div>
                   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <p class="text-sm text-gray-500">Número de Retención</p>
@@ -204,7 +225,7 @@
                 </div>
                 <div class="flex space-x-2 ml-4">
                   <button 
-                    @click="editMovimiento(retencion, 'retencion')"
+                    @click.stop="editMovimiento(retencion, 'retencion')"
                     class="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50 transition-all duration-200"
                     title="Editar"
                   >
@@ -213,7 +234,7 @@
                     </svg>
                   </button>
                   <button 
-                    @click="deleteMovimiento(retencion, 'retencion')"
+                    @click.stop="deleteMovimiento(retencion, 'retencion')"
                     class="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition-all duration-200"
                     title="Eliminar"
                   >
@@ -229,6 +250,14 @@
       </div>
     </div>
 
+    <!-- DEBUG TEMPORAL - BORRAR DESPUÉS -->
+    <div class="fixed bottom-4 right-4 bg-red-500 text-white p-2 rounded text-xs z-50">
+      <p>🐛 DEBUG:</p>
+      <p>showEditOnlyModal: {{ showEditOnlyModal }}</p>
+      <p>selectedMovimientoToEdit: {{ selectedMovimientoToEdit?.id || 'null' }}</p>
+      <p>service: {{ service ? 'OK' : 'NULL' }}</p>
+    </div>
+
     <!-- Modal de crear/editar -->
     <EditMovementModal
       v-if="showCreateModal"
@@ -239,12 +268,23 @@
       @close="closeCreateModal"
       @save="saveMovimiento"
     />
+
+    <!-- Modal EXCLUSIVO para EDICIÓN (PUT) -->
+    <EditOnlyModal
+      :show="showEditOnlyModal"
+      :movimiento-data="selectedMovimientoToEdit"
+      :service="service"
+      :deposit-id="reparto?.deposits?.[0]?.depositId || reparto?.deposits?.[0]?.id || reparto?.deposits?.[0]?.identifier"
+      @close="closeEditOnlyModal"
+      @updated="(updateInfo) => onEditComplete(updateInfo)"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import EditMovementModal from './EditMovementModal.vue'
+import EditOnlyModal from './EditOnlyModalNew.vue'
 
 const props = defineProps({
   isVisible: Boolean,
@@ -257,7 +297,9 @@ const emit = defineEmits(['close', 'updated', 'delete-movement'])
 // Estado
 const activeTab = ref('cheques')
 const showCreateModal = ref(false)
+const showEditOnlyModal = ref(false)
 const editingMovimiento = ref(null)
+const selectedMovimientoToEdit = ref(null)
 const cheques = ref([])
 const retenciones = ref([])
 const loading = ref(false)
@@ -310,8 +352,19 @@ const loadMovimientos = async () => {
             console.log(`📊 [MovFinModal] Primera retención:`, JSON.stringify(retencionesDeposit[0], null, 2))
           }
 
-          cheques.value.push(...(chequesDeposit || []))
-          retenciones.value.push(...(retencionesDeposit || []))
+          // Agregar deposit_id a cada movimiento para futura referencia
+          const chequesConDeposito = (chequesDeposit || []).map(cheque => ({
+            ...cheque,
+            deposit_id: depositId
+          }))
+          
+          const retencionesConDeposito = (retencionesDeposit || []).map(retencion => ({
+            ...retencion,
+            deposit_id: depositId
+          }))
+
+          cheques.value.push(...chequesConDeposito)
+          retenciones.value.push(...retencionesConDeposito)
         } catch (error) {
           console.warn(`Error cargando movimientos para depósito ${depositId}:`, error)
         }
@@ -332,11 +385,54 @@ const loadMovimientos = async () => {
 }
 
 const editMovimiento = (movimiento, tipo) => {
-  editingMovimiento.value = {
+  console.log('� [MovFinModal] ============ CLICK DETECTADO EN TARJETA ============')
+  console.log('� [MovFinModal] Función editMovimiento ejecutada')
+  console.log('🚨 [MovFinModal] Usuario hizo clic en tarjeta de:', tipo.toUpperCase())
+  console.log('� [MovFinModal] movimiento original:', JSON.stringify(movimiento, null, 2))
+  console.log('� [MovFinModal] tipo:', tipo)
+  
+  // USAR EL NUEVO MODAL ESPECÍFICO PARA EDICIÓN
+  selectedMovimientoToEdit.value = {
     ...movimiento,
-    tipo: tipo.toUpperCase()
+    tipo: tipo.toUpperCase(),
+    deposit_id: movimiento.deposit_id // Preservar el deposit_id para actualización específica
   }
+  
+  console.log('� [MovFinModal] selectedMovimientoToEdit.value:', JSON.stringify(selectedMovimientoToEdit.value, null, 2))
+  console.log('🚨 [MovFinModal] Cambiando showEditOnlyModal.value a true...')
+  showEditOnlyModal.value = true
+  console.log('🚨 [MovFinModal] showEditOnlyModal.value es ahora:', showEditOnlyModal.value)
+  console.log('🚨 [MovFinModal] ============ DEBERÍA ABRIR EDITONLYMODAL ============')
+}
+
+const editMovimientoOLD = (movimiento, tipo) => {
+  console.log('🖱️ [MovFinModal] ============ CLICK EN TARJETA PARA EDITAR (OLD) ============')
+  console.log('🖱️ [MovFinModal] Usuario hizo clic en tarjeta de:', tipo.toUpperCase())
+  console.log('🖱️ [MovFinModal] movimiento original:', JSON.stringify(movimiento, null, 2))
+  console.log('🖱️ [MovFinModal] tipo:', tipo)
+  
+  // Preparar los datos para el modal de edición
+  const movimientoParaEditar = {
+    ...movimiento,
+    tipo: tipo.toUpperCase(),
+    // Normalizar campos para que el modal los reciba correctamente
+    numero: movimiento.nro_cheque || movimiento.nro_retencion || movimiento.numero,
+    banco: movimiento.banco,
+    importe: movimiento.importe,
+    fecha: movimiento.fecha,
+    concepto: movimiento.concepto || movimiento.tipo,
+    // Mantener campos originales para identificación
+    id: movimiento.id,
+    nro_cheque: movimiento.nro_cheque,
+    nro_retencion: movimiento.nro_retencion
+  }
+  
+  console.log('🖱️ [MovFinModal] editingMovimiento después de procesar:', JSON.stringify(movimientoParaEditar, null, 2))
+  
+  editingMovimiento.value = movimientoParaEditar
   showCreateModal.value = true
+  console.log('🖱️ [MovFinModal] Modal abierto para EDITAR, showCreateModal:', showCreateModal.value)
+  console.log('🖱️ [MovFinModal] ============ MODAL DE EDICIÓN PREPARADO ============')
 }
 
 const deleteMovimiento = async (movimiento, tipo) => {
@@ -345,21 +441,44 @@ const deleteMovimiento = async (movimiento, tipo) => {
   console.log('🗑️ [MovFinModal] movimiento:', JSON.stringify(movimiento, null, 2))
   console.log('🗑️ [MovFinModal] tipo:', tipo)
   console.log('🗑️ [MovFinModal] reparto:', props.reparto?.idReparto)
-  console.log('🗑️ [MovFinModal] reparto completo:', JSON.stringify(props.reparto, null, 2))
   
-  // Verificar si el movimiento tiene los campos necesarios
+  // Encontrar el índice real del movimiento en el array correspondiente
+  let realIndex = -1
   if (tipo === 'cheque') {
     console.log('🗑️ [MovFinModal] movimiento.nro_cheque:', movimiento?.nro_cheque)
     console.log('🗑️ [MovFinModal] movimiento.numero:', movimiento?.numero)
+    
+    // Buscar el índice en el array de cheques
+    realIndex = cheques.value.findIndex(cheque => {
+      const chequeId = cheque.nro_cheque || cheque.numero
+      const movimientoId = movimiento.nro_cheque || movimiento.numero
+      return chequeId === movimientoId
+    })
+    
+    console.log('🗑️ [MovFinModal] Índice real del cheque:', realIndex)
     if (!movimiento?.nro_cheque && !movimiento?.numero) {
       console.error('❌ [MovFinModal] PROBLEMA: El cheque no tiene nro_cheque ni numero')
     }
   } else if (tipo === 'retencion') {
     console.log('🗑️ [MovFinModal] movimiento.nro_retencion:', movimiento?.nro_retencion)
     console.log('🗑️ [MovFinModal] movimiento.numero:', movimiento?.numero)
+    
+    // Buscar el índice en el array de retenciones
+    realIndex = retenciones.value.findIndex(retencion => {
+      const retencionId = retencion.nro_retencion || retencion.numero
+      const movimientoId = movimiento.nro_retencion || movimiento.numero
+      return retencionId === movimientoId
+    })
+    
+    console.log('🗑️ [MovFinModal] Índice real de la retención:', realIndex)
     if (!movimiento?.nro_retencion && !movimiento?.numero) {
       console.error('❌ [MovFinModal] PROBLEMA: La retención no tiene nro_retencion ni numero')
     }
+  }
+  
+  if (realIndex === -1) {
+    console.error('❌ [MovFinModal] PROBLEMA: No se pudo encontrar el índice del movimiento')
+    return
   }
   
   // Crear el payload para el evento
@@ -367,7 +486,7 @@ const deleteMovimiento = async (movimiento, tipo) => {
     tipo: tipo,
     movimiento: movimiento,
     reparto: props.reparto, // Pasar el reparto completo
-    index: 0 // Dummy index para compatibilidad
+    index: realIndex // Usar el índice real encontrado
   }
   
   console.log('🗑️ [MovFinModal] Payload del evento:', JSON.stringify(eventPayload, null, 2))
@@ -378,25 +497,183 @@ const deleteMovimiento = async (movimiento, tipo) => {
 }
 
 const saveMovimiento = async (movimientoData) => {
+  console.log('💾 [MovFinModal] ============ GUARDANDO MOVIMIENTO ============')
+  console.log('💾 [MovFinModal] movimientoData recibido:', JSON.stringify(movimientoData, null, 2))
+  console.log('💾 [MovFinModal] editingMovimiento actual:', JSON.stringify(editingMovimiento.value, null, 2))
+  
   try {
-    // Aquí necesitarías implementar la lógica para guardar
-    // usando los nuevos endpoints
-    console.log('Guardando movimiento:', movimientoData)
+    // Detectar si estamos editando o creando
+    const isEditing = editingMovimiento.value && (
+      editingMovimiento.value.id || 
+      editingMovimiento.value.nro_cheque || 
+      editingMovimiento.value.nro_retencion ||
+      editingMovimiento.value.numero
+    )
+    
+    console.log('💾 [MovFinModal] Modo detectado:', isEditing ? 'EDICIÓN' : 'CREACIÓN')
 
-    // Recargar movimientos
+    if (isEditing) {
+      // ============ MODO EDICIÓN - Usar PUT ============
+      if (movimientoData.tipo === 'CHEQUE' || editingMovimiento.value.tipo === 'CHEQUE') {
+        // Obtener el ID del cheque
+        const chequeId = editingMovimiento.value.id || 
+                        editingMovimiento.value.nro_cheque || 
+                        editingMovimiento.value.numero
+        
+        console.log('💾 [MovFinModal] 🏦 Actualizando CHEQUE con ID:', chequeId)
+        
+        const chequeUpdateData = {
+          nro_cheque: movimientoData.numero || movimientoData.nro_cheque,
+          banco: movimientoData.banco,
+          importe: parseFloat(movimientoData.importe),
+          fecha: movimientoData.fecha || new Date().toISOString().split('T')[0],
+          concepto: movimientoData.concepto || ''
+        }
+        
+        console.log('💾 [MovFinModal] Datos para actualizar cheque:', JSON.stringify(chequeUpdateData, null, 2))
+        console.log('💾 [MovFinModal] 🌐 Llamando a props.service.updateCheque...')
+        
+        await props.service.updateCheque(chequeId, chequeUpdateData)
+        console.log('✅ [MovFinModal] 🏦 Cheque actualizado exitosamente')
+        
+      } else if (movimientoData.tipo === 'RETENCION' || editingMovimiento.value.tipo === 'RETENCION') {
+        // Obtener el ID de la retención
+        const retencionId = editingMovimiento.value.id || 
+                           editingMovimiento.value.nro_retencion || 
+                           editingMovimiento.value.numero
+        
+        console.log('💾 [MovFinModal] 📋 Actualizando RETENCIÓN con ID:', retencionId)
+        
+        const retencionUpdateData = {
+          nro_retencion: movimientoData.numero || movimientoData.nro_retencion,
+          tipo: movimientoData.concepto || movimientoData.tipo || 'IIBB',
+          importe: parseFloat(movimientoData.importe),
+          fecha: movimientoData.fecha || new Date().toISOString().split('T')[0],
+          concepto: movimientoData.concepto || ''
+        }
+        
+        console.log('💾 [MovFinModal] Datos para actualizar retención:', JSON.stringify(retencionUpdateData, null, 2))
+        console.log('💾 [MovFinModal] 🌐 Llamando a props.service.updateRetencion...')
+        
+        await props.service.updateRetencion(retencionId, retencionUpdateData)
+        console.log('✅ [MovFinModal] 📋 Retención actualizada exitosamente')
+      }
+      
+    } else {
+      // ============ MODO CREACIÓN - Usar POST ============
+      // Obtener el depositId del reparto
+      const depositId = props.reparto?.deposits?.[0]?.depositId || 
+                       props.reparto?.deposits?.[0]?.id || 
+                       props.reparto?.deposits?.[0]?.deposit_id
+      
+      console.log('💾 [MovFinModal] 🆕 Creando nuevo movimiento en depósito:', depositId)
+      
+      if (!depositId) {
+        throw new Error('No se pudo determinar el ID del depósito para crear el movimiento')
+      }
+      
+      if (movimientoData.tipo === 'CHEQUE') {
+        const chequeCreateData = {
+          deposit_id: depositId,
+          nro_cheque: movimientoData.numero,
+          banco: movimientoData.banco,
+          importe: parseFloat(movimientoData.importe),
+          fecha: movimientoData.fecha || new Date().toISOString().split('T')[0],
+          concepto: movimientoData.concepto || ''
+        }
+        
+        console.log('💾 [MovFinModal] Datos para crear cheque:', JSON.stringify(chequeCreateData, null, 2))
+        await props.service.createCheque(depositId, chequeCreateData)
+        console.log('✅ [MovFinModal] 🏦 Cheque creado exitosamente')
+        
+      } else if (movimientoData.tipo === 'RETENCION') {
+        const retencionCreateData = {
+          deposit_id: depositId,
+          nro_retencion: movimientoData.numero,
+          concepto: movimientoData.concepto || 'IIBB',
+          importe: parseFloat(movimientoData.importe),
+          fecha: movimientoData.fecha || new Date().toISOString().split('T')[0]
+        }
+        
+        console.log('💾 [MovFinModal] Datos para crear retención:', JSON.stringify(retencionCreateData, null, 2))
+        await props.service.createRetencion(depositId, retencionCreateData)
+        console.log('✅ [MovFinModal] 📋 Retención creada exitosamente')
+      }
+    }
+
+    // ============ POST-PROCESAMIENTO ============
+    console.log('🔄 [MovFinModal] Recargando movimientos financieros...')
     await loadMovimientos()
+    
+    console.log('📡 [MovFinModal] Emitiendo evento "updated" al componente padre...')
     emit('updated')
+    
+    console.log('🚪 [MovFinModal] Cerrando modal de creación/edición...')
     closeCreateModal()
+    
+    console.log('🎉 [MovFinModal] ============ OPERACIÓN COMPLETADA EXITOSAMENTE ============')
 
   } catch (error) {
-    console.error('Error guardando movimiento:', error)
-    alert(`Error al guardar: ${error.message}`)
+    console.error('❌ [MovFinModal] ============ ERROR EN OPERACIÓN ============')
+    console.error('❌ [MovFinModal] Error completo:', error)
+    console.error('❌ [MovFinModal] Error message:', error.message)
+    console.error('❌ [MovFinModal] Error response:', error.response?.data)
+    
+    // Mostrar error más detallado al usuario
+    let errorMessage = 'Error desconocido'
+    if (error.response?.data?.detail) {
+      errorMessage = error.response.data.detail
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    alert(`Error al guardar movimiento: ${errorMessage}`)
   }
 }
 
 const closeCreateModal = () => {
   showCreateModal.value = false
   editingMovimiento.value = null
+}
+
+const closeEditOnlyModal = () => {
+  console.log('🔧 [MovFinModal] Cerrando EditOnlyModal')
+  showEditOnlyModal.value = false
+  selectedMovimientoToEdit.value = null
+}
+
+const onEditComplete = async (updateInfo) => {
+  console.log('✅ [MovFinModal] Edición completada')
+  console.log('🔄 [MovFinModal] Payload recibido:', updateInfo)
+
+  // 1. Patch optimista inmediato
+  if (updateInfo && updateInfo.id) {
+    const { id, tipo, data, updatedEntity } = updateInfo
+    const source = updatedEntity || data
+    if (tipo === 'CHEQUE') {
+      const idx = cheques.value.findIndex(c => c.id === id)
+      if (idx !== -1) cheques.value[idx] = { ...cheques.value[idx], ...source }
+    } else if (tipo === 'RETENCION') {
+      const idx = retenciones.value.findIndex(r => r.id === id)
+      if (idx !== -1) retenciones.value[idx] = { ...retenciones.value[idx], ...source }
+    }
+    cheques.value = [...cheques.value]
+    retenciones.value = [...retenciones.value]
+    console.log('⚡ [MovFinModal] Patch optimista aplicado')
+  }
+
+  // 2. Emitir al padre inmediatamente
+  try { emit('updated') } catch (e) { console.warn('⚠️ emit updated falló', e) }
+
+  // 3. Refetch forzado sin cache
+  console.log('🔄 [MovFinModal] Refetch forzado no-cache')
+  await loadMovimientos(true)
+  console.log('✅ [MovFinModal] Refetch completado')
+
+  // 4. Cerrar modal
+  closeEditOnlyModal()
 }
 
 const formatMoney = (value) => {
@@ -411,6 +688,8 @@ const formatDate = (date) => {
 
 // Cargar datos al montar
 onMounted(() => {
+  console.log('🌟 [MovFinModal] ========== COMPONENT MOUNTED ==========')
+  console.log('🌟 [MovFinModal] props.isVisible:', props.isVisible)
   if (props.isVisible) {
     loadMovimientos()
   }
@@ -418,8 +697,20 @@ onMounted(() => {
 
 // Observar cambios en la visibilidad
 watch(() => props.isVisible, (newValue) => {
+  console.log('👁️ [MovFinModal] ========== MODAL VISIBILITY CHANGED ==========')
+  console.log('👁️ [MovFinModal] newValue (isVisible):', newValue)
+  console.log('👁️ [MovFinModal] props.reparto:', props.reparto?.idReparto || 'NO REPARTO')
+  console.log('👁️ [MovFinModal] props.service:', props.service ? 'SERVICE OK' : 'NO SERVICE')
+  
   if (newValue) {
+    // Modal se está abriendo - cargar datos frescos
+    console.log('🔄 [MovFinModal] Modal abriéndose - cargando datos frescos')
     loadMovimientos()
+  } else {
+    // Modal se está cerrando - limpiar datos para próxima apertura
+    console.log('🧹 [MovFinModal] Modal cerrándose - limpiando datos cached')
+    cheques.value = []
+    retenciones.value = []
   }
 })
 </script>

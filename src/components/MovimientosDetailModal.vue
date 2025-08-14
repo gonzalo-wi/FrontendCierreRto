@@ -137,10 +137,10 @@
                   :cheques="cheques"
                   :retenciones="retenciones"
                   :reparto="reparto"
+                  :service="service"
                   :compact="false"
                   :can-delete="true"
                   @delete-movement="handleDeleteMovement"
-                  @edit-movement="handleEditMovement"
                 />
               </div>
             </div>
@@ -167,18 +167,7 @@
               </button>
               
               <button 
-                v-if="reparto?.movimientoFinanciero"
-                @click="$emit('edit', reparto)" 
-                class="footer-button primary"
-              >
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                </svg>
-                Editar Movimientos
-              </button>
-              
-              <button 
-                v-else
+                v-if="!reparto?.movimientoFinanciero || totalMovimientos === 0"
                 @click="$emit('create', reparto)" 
                 class="footer-button primary"
               >
@@ -208,10 +197,14 @@ const props = defineProps({
   reparto: {
     type: Object,
     default: null
+  },
+  service: {
+    type: Object,
+    required: true
   }
 })
 
-const emit = defineEmits(['close', 'edit', 'create', 'delete-movement', 'delete-all-movements', 'edit-movement'])
+const emit = defineEmits(['close', 'create', 'delete-movement', 'delete-all-movements'])
 
 // Computadas para estadísticas
 const cheques = computed(() => props.reparto?.cheques || props.reparto?.movimientoFinanciero?.cheques || [])
@@ -263,28 +256,14 @@ const handleDeleteMovement = (eventData) => {
     reparto: eventData.reparto || props.reparto // Usar el reparto del evento o del modal
   }
   
-  console.log('🗑️ [MovDetailModal] Reenviando evento al padre con datos mejorados')
+  console.log('🗑️ [MovDetailModal] eventData mejorado:', JSON.stringify(enhancedEventData, null, 2))
+  console.log('🗑️ [MovDetailModal] Emitiendo al padre (RepartoTable)...')
+  
   emit('delete-movement', enhancedEventData)
 }
 
-// Handler para manejar edición de movimientos específicos
-const handleEditMovement = (eventData) => {
-  console.log('✏️ [MovDetailModal] ============ MANEJANDO EDIT MOVEMENT ============')
-  console.log('✏️ [MovDetailModal] eventData recibido:', JSON.stringify(eventData, null, 2))
-  console.log('✏️ [MovDetailModal] props.reparto disponible:', props.reparto?.idReparto)
-  
-  // Asegurar que el reparto esté en el evento
-  const enhancedEventData = {
-    ...eventData,
-    reparto: eventData.reparto || props.reparto // Usar el reparto del evento o del modal
-  }
-  
-    console.log('✏️ [MovDetailModal] Reenviando evento al padre con datos mejorados')
-  emit('edit-movement', enhancedEventData)
-}
-
-// Handler para manejar eliminación de todos los movimientos
-const handleDeleteAllMovements = () => {
+// Función para manejar eliminación de todos los movimientos
+const handleDeleteAll = () => {
   const totalMov = totalMovimientos.value
   const montoTotalMov = montoTotal.value
   

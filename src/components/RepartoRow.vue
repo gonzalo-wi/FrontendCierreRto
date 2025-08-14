@@ -88,6 +88,7 @@
         <MovimientoFinanciero 
           :movimiento="reparto.movimientoFinanciero" 
           :reparto="reparto" 
+          :service="service"
           @delete-movement="(eventData) => $emit('delete-movement', eventData)"
         />
       </div>
@@ -133,7 +134,7 @@
       <div v-if="reparto.movimientoFinanciero" class="flex justify-center space-x-1">
         <!-- Botón Ver Movimientos -->
         <button 
-          @click="$emit('view-movements', reparto)"
+          @click="handleViewMovementsClick"
           class="group relative inline-flex items-center justify-center w-7 h-7 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
           title="Ver todos los movimientos en detalle"
         >
@@ -217,6 +218,10 @@ import RtoLaPlataService from '../services/RtoLaPlataService.js'
 
 const props = defineProps({
   reparto: {
+    type: Object,
+    required: true
+  },
+  service: {
     type: Object,
     required: true
   }
@@ -576,6 +581,18 @@ const handleDeleteMovement = () => {
     reparto: props.reparto,
     depositId: depositId
   })
+}
+
+// Función para manejar click en ojito (ver movimientos)
+const handleViewMovementsClick = () => {
+  console.log('👁️ [RepartoRow] ========== CLICK EN OJITO DETECTADO ==========')
+  console.log('👁️ [RepartoRow] Reparto ID:', props.reparto.idReparto)
+  console.log('👁️ [RepartoRow] Reparto completo:', JSON.stringify(props.reparto, null, 2))
+  console.log('👁️ [RepartoRow] Emitiendo evento view-movements...')
+  
+  emit('view-movements', props.reparto)
+  
+  console.log('👁️ [RepartoRow] Evento view-movements emitido!')
 }
 
 // Tooltip dinámico para comprobantes

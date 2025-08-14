@@ -280,10 +280,10 @@
             v-for="(reparto, index) in paginatedRepartos" 
             :key="reparto.idReparto" 
             :reparto="reparto"
+            :service="service"
             :class="{ 'animate-row': true }"
             :style="{ animationDelay: `${index * 50}ms` }"
             @edit="$emit('edit', $event)"
-            @edit-movement="$emit('edit-movement', $event)"
             @delete-movement="handleDeleteMovement"
             @view-movements="handleViewMovements"
             @toggle-comprobantes="handleToggleComprobantes"
@@ -411,10 +411,10 @@
     <MovimientosDetailModal
       :isVisible="showMovimientosModal"
       :reparto="selectedReparto"
+      :service="service"
       @close="closeMovimientosModal"
       @edit="handleEditFromModal"
       @create="handleCreateFromModal"
-      @edit-movement="$emit('edit-movement', $event)"
       @delete-movement="handleDeleteMovement"
       @delete-all-movements="handleDeleteAllMovements"
     />
@@ -438,10 +438,14 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  service: {
+    type: Object,
+    required: true
   }
 })
 
-const emit = defineEmits(['refresh', 'edit', 'edit-movement', 'delete-movement', 'delete-all-movements', 'toggle-comprobantes', 'estado-actualizado'])
+const emit = defineEmits(['refresh', 'edit', 'delete-movement', 'delete-all-movements', 'toggle-comprobantes', 'estado-actualizado'])
 
 // Estados para el modal de movimientos
 const showMovimientosModal = ref(false)

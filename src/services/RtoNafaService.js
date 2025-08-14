@@ -639,10 +639,12 @@ export default {
    * @param {string} depositId - ID del depósito
    * @returns {Promise<Array>} Lista de cheques
    */
-  async getCheques(depositId) {
+  async getCheques(depositId, opts = {}) {
     try {
-      console.log(`📋 [NAFA] Obteniendo cheques para depósito ${depositId}`)
-      const response = await apiClient.get(`/deposits/${depositId}/cheques`)
+      const noCache = opts.noCache
+      const url = noCache ? `/deposits/${depositId}/cheques?ts=${Date.now()}` : `/deposits/${depositId}/cheques`
+      console.log(`📋 [NAFA] Obteniendo cheques para depósito ${depositId}${noCache ? ' (no-cache)' : ''}`)
+      const response = await apiClient.get(url)
       console.log(`✅ [NAFA] Cheques obtenidos:`, response.data)
       return response.data || []
     } catch (error) {
@@ -679,7 +681,7 @@ export default {
   async updateCheque(depositId, chequeId, chequeData) {
     try {
       console.log(`📝 [NAFA] Actualizando cheque ${chequeId} del depósito ${depositId}:`, chequeData)
-      const response = await apiClient.put(`/deposits/${depositId}/cheques/${chequeId}`, chequeData)
+      const response = await apiClient.put(`/cheques-retenciones/cheques/${chequeId}`, chequeData)
       console.log(`✅ [NAFA] Cheque actualizado exitosamente:`, response.data)
       return response.data
     } catch (error) {
@@ -711,10 +713,12 @@ export default {
    * @param {string} depositId - ID del depósito
    * @returns {Promise<Array>} Lista de retenciones
    */
-  async getRetenciones(depositId) {
+  async getRetenciones(depositId, opts = {}) {
     try {
-      console.log(`📋 [NAFA] Obteniendo retenciones para depósito ${depositId}`)
-      const response = await apiClient.get(`/deposits/${depositId}/retenciones`)
+      const noCache = opts.noCache
+      const url = noCache ? `/deposits/${depositId}/retenciones?ts=${Date.now()}` : `/deposits/${depositId}/retenciones`
+      console.log(`📋 [NAFA] Obteniendo retenciones para depósito ${depositId}${noCache ? ' (no-cache)' : ''}`)
+      const response = await apiClient.get(url)
       console.log(`✅ [NAFA] Retenciones obtenidas:`, response.data)
       return response.data || []
     } catch (error) {
@@ -751,7 +755,7 @@ export default {
   async updateRetencion(depositId, retencionId, retencionData) {
     try {
       console.log(`📝 [NAFA] Actualizando retención ${retencionId} del depósito ${depositId}:`, retencionData)
-      const response = await apiClient.put(`/deposits/${depositId}/retenciones/${retencionId}`, retencionData)
+      const response = await apiClient.put(`/cheques-retenciones/retenciones/${retencionId}`, retencionData)
       console.log(`✅ [NAFA] Retención actualizada exitosamente:`, response.data)
       return response.data
     } catch (error) {
