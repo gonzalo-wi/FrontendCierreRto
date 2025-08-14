@@ -338,10 +338,18 @@ const updateMovimiento = async () => {
   loading.value = true
 
   try {
+    // Extraer solo el código del concepto (parte antes del " - ")
+    const conceptoCodigo = formData.concepto.includes(' - ') 
+      ? formData.concepto.split(' - ')[0] 
+      : formData.concepto
+
+    console.log('🔍 [EditOnlyModal] Concepto original:', formData.concepto)
+    console.log('🔍 [EditOnlyModal] Código extraído:', conceptoCodigo)
+
     const updateData = {
       importe: parseFloat(formData.importe),
       fecha: formData.fecha,
-      concepto: formData.concepto
+      concepto: conceptoCodigo
     }
 
     let updatedEntity = null

@@ -1140,7 +1140,7 @@ const deleteMovement = async (eventData) => {
         result = await props.service.deleteCheque(depositId, identificador)
         
       } else if (tipo === 'retencion') {
-        // PRIORIZAR ID único del backend
+        // PRIORIZAR ID único del backend - OBLIGATORIO para eliminación
         identificador = movimiento.id || movimiento.retencion_id
         
         console.log('⚠️ [RepartoView] ============ PROCESANDO RETENCION ============')
@@ -1151,17 +1151,13 @@ const deleteMovement = async (eventData) => {
         console.log('⚠️ [RepartoView] identificador final (ID):', identificador)
         
         if (!identificador) {
-          // FALLBACK: usar número solo si no hay ID
-          identificador = movimiento.nro_retencion || movimiento.numero
-          console.warn('⚠️ [RepartoView] No hay ID único, usando número como fallback:', identificador)
+          console.error('❌ [RepartoView] La retención no tiene ID único de base de datos')
+          console.error('❌ [RepartoView] Objeto retención completo:', JSON.stringify(movimiento, null, 2))
+          console.error('❌ [RepartoView] CRÍTICO: No se puede eliminar sin ID de BD')
+          throw new Error('La retención no tiene ID único de base de datos. No se puede eliminar de forma segura.')
         }
         
-        if (!identificador) {
-          console.error('❌ [RepartoView] La retención no tiene ID ni número identificador')
-          console.error('❌ [RepartoView] Objeto retención completo:', JSON.stringify(movimiento, null, 2))
-          throw new Error('La retención no tiene ID ni número identificador')
-        }
-        console.log(`🗑️ [RepartoView] ✅ Eliminando retención ID/N° ${identificador} para deposit_id: ${depositId}`)
+        console.log(`🗑️ [RepartoView] ✅ Eliminando retención ID ${identificador} para deposit_id: ${depositId}`)
         console.log(`🌐 [RepartoView] ✅ HACIENDO: DELETE /deposits/${depositId}/retenciones/${identificador}`)
         result = await props.service.deleteRetencion(depositId, identificador)
         
