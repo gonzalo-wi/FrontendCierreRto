@@ -1,7 +1,11 @@
 // Configuración de la aplicación
 const config = {
   // URL base del backend
-  API_URL: 'http://localhost:8001/api',
+  // En desarrollo: usa VITE_API_URL o http://localhost:8001/api
+  // En producción (build): usa ruta relativa para que Nginx proxyee a /api
+  API_URL: import.meta.env.PROD
+    ? '/api'
+    : (import.meta.env.VITE_API_URL || 'http://localhost:8001/api'),
   
   // Configuración de desarrollo vs producción
   isDevelopment: import.meta.env.DEV,

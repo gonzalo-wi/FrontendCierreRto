@@ -3,13 +3,15 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [vue()],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
     },
   },
+  // Drop console/debugger solo en build de producción
+  esbuild: mode === 'production' ? { drop: ['console', 'debugger'] } : undefined,
   server: {
     port: 3000,
     open: true,
@@ -62,4 +64,4 @@ export default defineConfig({
       }
     }
   }
-})
+}))
