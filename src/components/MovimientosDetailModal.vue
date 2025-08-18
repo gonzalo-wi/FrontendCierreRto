@@ -204,7 +204,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'create', 'delete-movement', 'delete-all-movements'])
+const emit = defineEmits(['close', 'create', 'edit', 'delete-movement', 'delete-all-movements'])
 
 // Computadas para estadísticas
 const cheques = computed(() => props.reparto?.cheques || props.reparto?.movimientoFinanciero?.cheques || [])

@@ -849,13 +849,25 @@ const saveMovement = async (movementData) => {
         console.log('🔁 [REPARTO_VIEW] Procesando cheque(s) (crear o actualizar)')
         for (const cheque of movementData.cheques) {
           const numeroEntrada = String(cheque.nro_cheque).trim()
-          // Estructura esperada
-            const chequeData = {
+          // Estructura esperada con TODOS los campos del modal
+          const chequeData = {
             numero: numeroEntrada,
             banco: cheque.banco,
             importe: parseFloat(cheque.importe),
-            fecha_cobro: cheque.fecha
+            fecha_cobro: cheque.fecha,
+            // Campos adicionales que ingresa el usuario
+            nrocta: cheque.nrocta ? parseInt(cheque.nrocta) : undefined,
+            nro_cuenta: cheque.nro_cuenta ? parseInt(cheque.nro_cuenta) : undefined,
+            sucursal: cheque.sucursal || undefined,
+            localidad: cheque.localidad || undefined
           }
+          
+          // Limpiar campos undefined para no enviar valores vacíos
+          Object.keys(chequeData).forEach(key => {
+            if (chequeData[key] === undefined) {
+              delete chequeData[key]
+            }
+          })
 
           // PRIORIZAR ID DEL BACKEND si está disponible (edición)
           if (cheque.id) {
