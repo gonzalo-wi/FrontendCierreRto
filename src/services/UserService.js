@@ -3,7 +3,9 @@ import config from '@/config'
 
 class UserService {
   constructor() {
-    this.API_URL = config.API_URL + '/admin/users'
+  this.API_URL = config.API_URL + '/admin/users'
+  // Diagnóstico: verificar a dónde apunta en runtime
+  console.log('[UserService] API_URL:', this.API_URL)
   }
 
   // Listar todos los usuarios
