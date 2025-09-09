@@ -58,6 +58,14 @@
                 </svg>
                 <span>{{ contadorExactos }} exactos</span>
               </div>
+
+              <!-- Badge de docs pendientes -->
+              <div v-if="contadorDocsPendientes > 0" class="bg-gradient-to-r from-yellow-100 to-yellow-200 border border-yellow-300 px-3 py-1.5 rounded-lg text-sm font-medium text-yellow-700 flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>{{ contadorDocsPendientes }} docs pendientes</span>
+              </div>
             </div>
           </div>
         </div>
@@ -128,6 +136,19 @@
               <option value="FALTANTE">📉 Faltantes</option>
               <option value="SOBRANTE">📈 Sobrantes</option>
               <option value="EXACTO">🎯 Exactos</option>
+            </select>
+          </div>
+
+          <!-- Filtro por documentos -->
+          <div class="relative group w-full sm:w-auto sm:min-w-[200px]">
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Documentos</label>
+            <select
+              v-model="docsFilter"
+              class="w-full px-4 py-3.5 bg-white/70 backdrop-blur border border-slate-200 hover:border-green-300 focus:border-green-500 focus:ring-4 focus:ring-green-500/20 rounded-xl text-sm font-medium transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
+            >
+              <option value="">Todos</option>
+              <option value="con-docs">📄 Con documentos</option>
+              <option value="sin-docs">⚪ Sin documentos</option>
             </select>
           </div>
         </div>
@@ -217,24 +238,24 @@
                 <span class="text-xs">Fecha</span>
               </div>
             </th>
-            <th class="table-header-compact group">
-              <div class="flex items-center space-x-1">
+            <th class="table-header-compact group text-center">
+              <div class="flex items-center justify-center space-x-1">
                 <svg class="w-3 h-3 text-gray-400 group-hover:text-green-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
                 </svg>
                 <span class="text-xs">Esperado</span>
               </div>
             </th>
-            <th class="table-header-compact group">
-              <div class="flex items-center space-x-1">
+            <th class="table-header-compact group text-center">
+              <div class="flex items-center justify-center space-x-1">
                 <svg class="w-3 h-3 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2 2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z"></path>
                 </svg>
                 <span class="text-xs">Real</span>
               </div>
             </th>
-            <th class="table-header-compact group">
-              <div class="flex items-center space-x-1">
+            <th class="table-header-compact group text-center">
+              <div class="flex items-center justify-center space-x-1">
                 <svg class="w-3 h-3 text-gray-400 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
                 </svg>
@@ -578,6 +599,7 @@ const getDepositId = (reparto) => {
 const searchRTO = ref('')
 const estadoFilter = ref('')
 const tipoFilter = ref('')
+const docsFilter = ref('')
 const soloDiferencias = ref(false)
 
 // Estados para paginación
@@ -619,6 +641,32 @@ const filteredRepartos = computed(() => {
     })
   }
 
+  // Filtro por documentos
+  if (docsFilter.value) {
+    filtered = filtered.filter(reparto => {
+      // Verificar si tiene documentos en base a varias posibles estructuras
+      const tieneChequesEnSemaforo = reparto.semaforoDocumentos?.totalCheques > 0
+      const tieneRetencionesEnSemaforo = reparto.semaforoDocumentos?.totalRetenciones > 0
+      const tieneChequesDirecto = reparto.totalCheques > 0
+      const tieneRetencionesDirecto = reparto.totalRetenciones > 0
+      const tieneChequesArray = reparto.cheques && reparto.cheques.length > 0
+      const tieneRetencionesArray = reparto.retenciones && reparto.retenciones.length > 0
+      
+      const tieneDocumentos = tieneChequesEnSemaforo || tieneRetencionesEnSemaforo ||
+                              tieneChequesDirecto || tieneRetencionesDirecto ||
+                              tieneChequesArray || tieneRetencionesArray
+      
+      switch (docsFilter.value) {
+        case 'con-docs':
+          return tieneDocumentos
+        case 'sin-docs':
+          return !tieneDocumentos
+        default:
+          return true
+      }
+    })
+  }
+
   // Filtro solo diferencias
   if (soloDiferencias.value) {
     filtered = filtered.filter(reparto => reparto.depositoReal !== reparto.depositoEsperado)
@@ -638,6 +686,13 @@ const contadorSobrantes = computed(() => {
 
 const contadorExactos = computed(() => {
   return props.repartos.filter(reparto => reparto.depositoReal === reparto.depositoEsperado).length
+})
+
+// Contadores de semáforos de documentos
+const contadorDocsPendientes = computed(() => {
+  return props.repartos.filter(reparto => 
+    reparto.semaforoDocumentos?.tiene_docs_esperados && !reparto.semaforoDocumentos?.docs_completos
+  ).length
 })
 
 // Paginación computada
@@ -686,6 +741,7 @@ const hasActiveFilters = computed(() => {
   return searchRTO.value.trim() !== '' || 
          estadoFilter.value !== '' || 
          tipoFilter.value !== '' ||
+         docsFilter.value !== '' ||
          soloDiferencias.value
 })
 
@@ -694,6 +750,7 @@ const clearFilters = () => {
   searchRTO.value = ''
   estadoFilter.value = ''
   tipoFilter.value = ''
+  docsFilter.value = ''
   soloDiferencias.value = false
   currentPage.value = 1
 }
@@ -706,7 +763,7 @@ const goToPage = (page) => {
 }
 
 // Watchers para resetear página cuando cambian los filtros
-watch([searchRTO, estadoFilter, tipoFilter, soloDiferencias, itemsPerPage], () => {
+watch([searchRTO, estadoFilter, tipoFilter, docsFilter, soloDiferencias, itemsPerPage], () => {
   currentPage.value = 1
 })
 

@@ -77,8 +77,13 @@ function getExpectedAmountsLaPlata() {
 function formatearComposicionEsperada(composicion) {
   if (!composicion) return ''
   
+  // Ordenar las letras en el orden específico: E C R
+  const ordenEspecifico = ['E', 'C', 'R']
+  const letrasPresentes = [...composicion].filter(letra => ordenEspecifico.includes(letra))
+  const letrasOrdenadas = ordenEspecifico.filter(letra => letrasPresentes.includes(letra))
+  
   // Separar las letras con guiones: E - C - R
-  return [...composicion].join(' - ')
+  return letrasOrdenadas.join(' - ')
 }
 
 export default {
@@ -262,7 +267,10 @@ export default {
       const depositInfo = {
         ...deposit,
         tieneDiferencia: deposit.tiene_diferencia || false,
-        composicionEsperado: deposit.composicion_esperado || ''
+        composicionEsperado: deposit.composicion_esperado || '',
+        semaforoDocumentos: deposit.semaforo_docs || {}, // Agregar datos del semáforo
+        totalCheques: deposit.total_cheques || 0,
+        totalRetenciones: deposit.total_retenciones || 0
       }
       
       repartosPorNumero[repartoKey].deposits.push(depositInfo)
@@ -396,6 +404,42 @@ export default {
 
       } catch (error) {
         console.error(`❌ [LA PLATA] Error procesando movimientos para ${reparto.idReparto}:`, error)
+      }
+      
+      // Consolidar información del semáforo para todo el reparto
+      const semaforosConsolidados = reparto.deposits.map(d => d.semaforoDocumentos).filter(s => s && Object.keys(s).length > 0)
+      if (semaforosConsolidados.length > 0) {
+        // Tomar el primer semáforo disponible (todos los depósitos del mismo reparto deberían tener la misma composición esperada)
+        reparto.semaforoDocumentos = semaforosConsolidados[0]
+        
+        // Calcular totales reales de documentos cargados
+        reparto.totalCheques = reparto.cheques ? reparto.cheques.length : 0
+        reparto.totalRetenciones = reparto.retenciones ? reparto.retenciones.length : 0
+        
+        // Actualizar el estado del semáforo basado en los documentos realmente cargados
+        if (reparto.semaforoDocumentos.tiene_docs_esperados) {
+          const chequesOk = !reparto.semaforoDocumentos.cheques_esperados || reparto.totalCheques > 0
+          const retencionesOk = !reparto.semaforoDocumentos.retenciones_esperadas || reparto.totalRetenciones > 0
+          reparto.semaforoDocumentos.docs_completos = chequesOk && retencionesOk
+          reparto.semaforoDocumentos.cheques_pendientes = reparto.semaforoDocumentos.cheques_esperados && reparto.totalCheques === 0
+          reparto.semaforoDocumentos.retenciones_pendientes = reparto.semaforoDocumentos.retenciones_esperadas && reparto.totalRetenciones === 0
+          reparto.semaforoDocumentos.cheques_cargados = reparto.totalCheques > 0
+          reparto.semaforoDocumentos.retenciones_cargadas = reparto.totalRetenciones > 0
+        }
+      } else {
+        // Sin información del semáforo - crear estructura por defecto
+        reparto.semaforoDocumentos = {
+          cheques_esperados: false,
+          retenciones_esperadas: false,
+          cheques_cargados: false,
+          retenciones_cargadas: false,
+          cheques_pendientes: false,
+          retenciones_pendientes: false,
+          docs_completos: false,
+          tiene_docs_esperados: false
+        }
+        reparto.totalCheques = reparto.cheques ? reparto.cheques.length : 0
+        reparto.totalRetenciones = reparto.retenciones ? reparto.retenciones.length : 0
       }
       
       repartos.push(reparto)
@@ -922,8 +966,13 @@ export default {
   formatearComposicionEsperada(composicion) {
     if (!composicion) return ''
     
+    // Ordenar las letras en el orden específico: E C R
+    const ordenEspecifico = ['E', 'C', 'R']
+    const letrasPresentes = [...composicion].filter(letra => ordenEspecifico.includes(letra))
+    const letrasOrdenadas = ordenEspecifico.filter(letra => letrasPresentes.includes(letra))
+    
     // Separar las letras con guiones: E - C - R
-    return [...composicion].join(' - ')
+    return letrasOrdenadas.join(' - ')
   },
 
   /**
@@ -934,7 +983,12 @@ export default {
   _formatearComposicion(composicion) {
     if (!composicion) return ''
     
+    // Ordenar las letras en el orden específico: E C R
+    const ordenEspecifico = ['E', 'C', 'R']
+    const letrasPresentes = [...composicion].filter(letra => ordenEspecifico.includes(letra))
+    const letrasOrdenadas = ordenEspecifico.filter(letra => letrasPresentes.includes(letra))
+    
     // Separar las letras con guiones: E - C - R
-    return [...composicion].join(' - ')
+    return letrasOrdenadas.join(' - ')
   }
 }

@@ -180,105 +180,122 @@ const fetchDailyTotals = async () => {
     isLoading.value = true
     error.value = null
 
-    // Obtener datos del mes actual completo (desde el día 1 hasta hoy)
-    const today = new Date()
-    const endDate = today.toISOString().split('T')[0] // Hoy
+    console.log('📊 [DAILY CHART] Iniciando versión simplificada para debugging')
+
+    // Usar fechas específicas que sabemos que tienen datos
+    const testDates = [
+      '2025-09-02', // Sabemos que tiene datos
+      '2025-09-08', // Sabemos que tiene datos  
+      '2025-09-09'  // Sabemos que tiene datos
+    ]
     
-    // Primer día del mes actual
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-    const startDate = startOfMonth.toISOString().split('T')[0]
-
-    console.log('📊 [DAILY CHART] Obteniendo datos históricos del mes:', {
-      startDate: startDate,
-      endDate: endDate,
-      rangoCompleto: `Del ${startDate} al ${endDate}`,
-      diasEstimados: Math.ceil((today - startOfMonth) / (1000 * 60 * 60 * 24)) + 1
-    })
-
-    const url = `/api-backend/charts/daily-totals?start_date=${startDate}&end_date=${endDate}&plant=total`
-    console.log('📊 [DAILY CHART] URL:', url)
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
+    const dailyData = []
+    
+    for (const dateStr of testDates) {
+      try {
+        console.log(`📊 [DAILY CHART] Obteniendo datos para ${dateStr}`)
+        
+        const dayUrl = `/api-backend/db/deposits/by-plant?date=${dateStr}`
+        console.log(`📊 [DAILY CHART] URL: ${dayUrl}`)
+        
+        const dayResponse = await fetch(dayUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        })
+        
+        console.log(`📊 [DAILY CHART] Respuesta ${dateStr}:`, {
+          status: dayResponse.status,
+          ok: dayResponse.ok
+        })
+        
+        if (dayResponse.ok) {
+          const dayData = await dayResponse.json()
+          console.log(`📊 [DAILY CHART] Datos ${dateStr}:`, dayData.summary)
+          
+          const totalAmount = dayData.summary?.grand_total || 0
+          const totalCount = dayData.summary?.total_deposits || 0
+          
+          // Agregar todos los días, incluso con 0, para testing
+          const dailyEntry = {
+            date: dateStr,
+            plant: 'total',
+            total_amount: totalAmount,
+            deposit_count: totalCount,
+            created_at: new Date().toISOString()
+          }
+          
+          dailyData.push(dailyEntry)
+          console.log(`✅ [DAILY CHART] ${dateStr}: $${totalAmount.toLocaleString()} (${totalCount} depósitos)`)
+        } else {
+          console.error(`❌ [DAILY CHART] Error ${dateStr}:`, dayResponse.status)
+        }
+      } catch (dayError) {
+        console.error(`❌ [DAILY CHART] Error procesando ${dateStr}:`, dayError)
       }
-    })
-
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`)
     }
 
-    const data = await response.json()
-    console.log('✅ [DAILY CHART] Datos recibidos:', data)
-    console.log('✅ [DAILY CHART] data.totals:', data.totals)
-    console.log('✅ [DAILY CHART] Cantidad de registros en totals:', data.totals?.length || 0)
+    console.log('✅ [DAILY CHART] Datos recopilados:', dailyData)
 
-    chartData.value = data.totals || []
-    console.log('✅ [DAILY CHART] chartData.value después de asignar:', chartData.value)
-    console.log('✅ [DAILY CHART] chartData.value.length:', chartData.value.length)
+        // Asignar los datos recopilados directamente
+    chartData.value = dailyData
+    console.log('✅ [DAILY CHART] Datos asignados a chartData:', chartData.value)
+    console.log('✅ [DAILY CHART] Longitud de chartData:', chartData.value.length)
 
-    // Verificar que cada elemento tenga las propiedades necesarias y mostrar rango de fechas
     if (chartData.value.length > 0) {
       console.log('✅ [DAILY CHART] Primer elemento:', chartData.value[0])
       console.log('✅ [DAILY CHART] Último elemento:', chartData.value[chartData.value.length - 1])
-      console.log('✅ [DAILY CHART] Propiedades del primer elemento:', Object.keys(chartData.value[0]))
-      
-      // Mostrar rango real de fechas recibidas
-      const fechas = chartData.value.map(item => item.date).sort()
-      console.log('📅 [DAILY CHART] Rango de fechas recibidas:', {
-        desde: fechas[0],
-        hasta: fechas[fechas.length - 1],
-        totalDias: fechas.length,
-        fechasSolicitadas: `${startDate} a ${endDate}`,
-        diasSolicitados: Math.ceil((today - startOfMonth) / (1000 * 60 * 60 * 24)) + 1
-      })
-      
-      // Verificar que todas las fechas y montos sean válidos
-      const invalidItems = chartData.value.filter(item => 
-        !item.date || 
-        item.total_amount === undefined || 
-        item.total_amount === null ||
-        isNaN(item.total_amount)
-      )
-      
-      if (invalidItems.length > 0) {
-        console.error('❌ [DAILY CHART] Elementos con datos inválidos:', invalidItems)
-      } else {
-        console.log('✅ [DAILY CHART] Todos los elementos tienen datos válidos')
-      }
+      console.log('🎯 [DAILY CHART] Preparando para crear gráfico...')
     } else {
-      console.warn('⚠️ [DAILY CHART] No se recibieron datos para el rango solicitado:', {
-        startDate,
-        endDate,
-        url
-      })
+      console.warn('⚠️ [DAILY CHART] No hay datos para mostrar')
+      error.value = 'No se pudieron obtener datos para las fechas de prueba'
     }
 
-    // Crear/actualizar el gráfico después de que los datos estén listos
-    await nextTick()
-    // Esperar un poco más para asegurar que el DOM esté completamente renderizado
-    setTimeout(() => {
-      createChart()
-    }, 100)
+    // Crear el gráfico inmediatamente si hay datos
+    if (chartData.value.length > 0) {
+      console.log('🎨 [DAILY CHART] Creando gráfico inmediatamente...')
+      await nextTick()
+      setTimeout(() => {
+        console.log('🎨 [DAILY CHART] Ejecutando createChart después de nextTick...')
+        createChart()
+      }, 200)
+    }
 
   } catch (err) {
     console.error('❌ [DAILY CHART] Error obteniendo datos:', err)
     error.value = err.message
+    chartData.value = [] // Asegurar que esté vacío en caso de error
   } finally {
     isLoading.value = false
+    console.log('🏁 [DAILY CHART] fetchDailyTotals terminado. Estado final:', {
+      chartDataLength: chartData.value.length,
+      isLoading: isLoading.value,
+      error: error.value,
+      chartData: chartData.value
+    })
   }
 }
 
 // Función para crear el gráfico con Chart.js (simulado con canvas nativo)
 const createChart = () => {
-  console.log('🎨 [DAILY CHART] Iniciando createChart con', chartData.value.length, 'datos')
+  console.log('🎨 [DAILY CHART] ========== INICIANDO CREATECHART ==========')
+  console.log('🎨 [DAILY CHART] chartData.value:', chartData.value)
+  console.log('🎨 [DAILY CHART] chartData.value.length:', chartData.value.length)
+  console.log('🎨 [DAILY CHART] chartCanvas.value:', !!chartCanvas.value)
   
-  if (!chartCanvas.value || chartData.value.length === 0) {
-    console.log('❌ [DAILY CHART] No se puede crear el gráfico - faltan datos o canvas')
+  if (!chartCanvas.value) {
+    console.error('❌ [DAILY CHART] No hay canvas disponible')
     return
   }
+  
+  if (chartData.value.length === 0) {
+    console.error('❌ [DAILY CHART] No hay datos disponibles')
+    return
+  }
+
+  console.log('✅ [DAILY CHART] Canvas y datos disponibles, procediendo...')
 
   // Destruir gráfico anterior si existe
   if (chartInstance.value) {
@@ -323,13 +340,11 @@ const createChart = () => {
   
   const amounts = sortedData.map(item => item.total_amount)
   const dates = sortedData.map(item => {
-    const date = new Date(item.date)
-    // Sumar un día para corregir el desfase
-    date.setDate(date.getDate() + 1)
+    const date = new Date(item.date + 'T00:00:00')
     return date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })
   })
 
-  console.log('📊 [DAILY CHART] Datos a graficar (ordenados por fecha, con corrección de +1 día):')
+  console.log('📊 [DAILY CHART] Datos a graficar (ordenados por fecha):')
   sortedData.forEach((item, i) => {
     console.log(`  ${i}: ${dates[i]} → $${amounts[i].toLocaleString()} (fecha API: ${item.date})`)
   })

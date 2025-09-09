@@ -23,13 +23,12 @@
     </td>
 
     <!-- Depósito Esperado - Compacto -->
-    <td class="px-2 py-1.5 whitespace-nowrap text-right">
+    <td class="px-2 py-1.5 whitespace-nowrap text-center">
       <div class="text-xs font-semibold text-gray-900 font-mono">
         {{ formatCurrency(reparto.depositoEsperado) }}
       </div>
-      <div class="text-xs text-gray-500">Esperado</div>
       <!-- Composición esperada -->
-      <div v-if="reparto.composicionEsperadoDescripcion" class="text-xs text-indigo-600 font-medium mt-1 flex items-center justify-end space-x-1">
+      <div v-if="reparto.composicionEsperadoDescripcion" class="text-xs text-indigo-600 font-medium mt-1 flex items-center justify-center space-x-1">
         <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
         </svg>
@@ -40,7 +39,7 @@
     </td>
 
     <!-- Depósito Real - Compacto -->
-    <td class="px-2 py-1.5 whitespace-nowrap text-right">
+    <td class="px-2 py-1.5 whitespace-nowrap text-center">
       <div class="text-xs font-semibold text-blue-900 font-mono">
         {{ formatCurrency(reparto.depositoReal) }}
       </div>
@@ -48,8 +47,8 @@
     </td>
 
     <!-- Diferencia - Compacto -->
-    <td class="px-2 py-1.5 whitespace-nowrap text-right">
-      <div class="flex items-center justify-end space-x-1">
+    <td class="px-2 py-1.5 whitespace-nowrap text-center">
+      <div class="flex items-center justify-center space-x-1">
         <svg class="w-3 h-3 flex-shrink-0" 
              :class="getDifferenceIconClass(getEstadoEfectivo())" 
              fill="currentColor" viewBox="0 0 20 20">
@@ -94,38 +93,15 @@
       </div>
     </td>
 
-    <!-- Comprobantes -->
+    <!-- Comprobantes con Semáforo -->
     <td class="px-2 py-1.5 whitespace-nowrap">
-      <div class="flex items-center justify-center">
-        <button 
-          @click="toggleComprobantes"
-          :disabled="loadingComprobantes"
-          class="relative inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
-          :title="getComprobantesTooltip()"
-        >
-          <!-- Spinner de carga -->
-          <svg v-if="loadingComprobantes" class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          
-          <!-- Icono normal -->
-          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-          </svg>
-          
-          <!-- Badge de contador -->
-          <div v-if="comprobantesCount > 0 && !loadingComprobantes && comprobantesVerificados" 
-               class="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-br from-red-500 to-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white shadow-lg">
-            {{ comprobantesCount }}
-          </div>
-          
-          <!-- Indicador de carga -->
-          <div v-if="loadingComprobantes" 
-               class="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full animate-ping">
-          </div>
-        </button>
-      </div>
+      <SemaforoDocumentos
+        :semaforo="reparto.semaforoDocumentos || {}"
+        :total-cheques="reparto.totalCheques || 0"
+        :total-retenciones="reparto.totalRetenciones || 0"
+        :loading="loadingComprobantes"
+        @toggle-docs="toggleComprobantes"
+      />
     </td>
 
     <!-- Acciones con diseño premium -->
@@ -201,6 +177,7 @@
 import { ref, computed, onMounted } from 'vue'
 import MovimientoFinanciero from './MovimientoFinanciero.vue'
 import EstadoSelector from './EstadoSelector.vue'
+import SemaforoDocumentos from './SemaforoDocumentos.vue'
 import { 
   formatDate, 
   formatCurrency, 
