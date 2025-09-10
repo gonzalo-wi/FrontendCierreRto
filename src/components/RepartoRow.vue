@@ -219,18 +219,10 @@ const getEstadoDinamico = computed(() => {
   }
 })
 
-// Función para obtener el estado efectivo (dinámico o del backend)
+// Función para obtener el estado efectivo (usar siempre el estado del backend)
 const getEstadoEfectivo = () => {
-  // Estados finales que no deben cambiar automáticamente
-  const estadosFinales = ['LISTO', 'ENVIADO']
-  
-  if (props.reparto.estado && estadosFinales.includes(props.reparto.estado)) {
-    return props.reparto.estado
-  }
-  
-  // Para todos los demás casos (incluyendo FALTANTE, SOBRANTE, EXACTO, PENDIENTE)
-  // calcular dinámicamente según la diferencia actual
-  return getEstadoDinamico.value
+  // Usar directamente el estado que viene del backend
+  return props.reparto.estado || 'PENDIENTE'
 }
 
 // Computed para obtener la diferencia actual (calculada dinámicamente)
@@ -374,18 +366,18 @@ const needsMovement = (reparto) => {
 
 // Funciones para el diseño premium basadas en estado del backend
 
-// Indicador de estado principal
+// Indicador de estado principal - basado en estado del backend
 const getStatusIndicatorClass = (estado) => {
+  const diferencia = props.reparto.depositoReal - props.reparto.depositoEsperado
+  
   switch (estado) {
     case 'LISTO':
-    case 'EXACTO':
-      return 'bg-gradient-to-br from-green-400 to-green-500'
+      // Para LISTO, color basado en la diferencia
+      if (diferencia === 0) return 'bg-gradient-to-br from-green-400 to-green-500'
+      if (diferencia > 0) return 'bg-gradient-to-br from-orange-400 to-orange-500'
+      return 'bg-gradient-to-br from-red-400 to-red-500'
     case 'ENVIADO':
       return 'bg-gradient-to-br from-blue-400 to-blue-500'
-    case 'SOBRANTE':
-      return 'bg-gradient-to-br from-orange-400 to-orange-500'
-    case 'FALTANTE':
-      return 'bg-gradient-to-br from-red-400 to-red-500'
     case 'PENDIENTE':
     default:
       return 'bg-gradient-to-br from-gray-400 to-gray-500'
@@ -394,16 +386,16 @@ const getStatusIndicatorClass = (estado) => {
 
 // Indicador para monto real
 const getRealAmountIndicatorClass = (estado) => {
+  const diferencia = props.reparto.depositoReal - props.reparto.depositoEsperado
+  
   switch (estado) {
     case 'LISTO':
-    case 'EXACTO':
-      return 'bg-green-400'
+      // Para LISTO, color basado en la diferencia
+      if (diferencia === 0) return 'bg-green-400'
+      if (diferencia > 0) return 'bg-orange-400'
+      return 'bg-red-400'
     case 'ENVIADO':
       return 'bg-blue-400'
-    case 'SOBRANTE':
-      return 'bg-orange-400'
-    case 'FALTANTE':
-      return 'bg-red-400'
     case 'PENDIENTE':
     default:
       return 'bg-gray-400'
@@ -412,67 +404,78 @@ const getRealAmountIndicatorClass = (estado) => {
 
 // Clases para iconos de diferencia
 const getDifferenceIconClass = (estado) => {
+  const diferencia = props.reparto.depositoReal - props.reparto.depositoEsperado
+  
+  // Lógica específica: verde para todo, excepto faltante > 10.000 que va en rojo
+  if (diferencia < 0 && Math.abs(diferencia) > 10000) {
+    return 'text-red-600'
+  }
+  
+  // Para todos los demás casos (exacto, sobrante, faltante <= 10.000)
   switch (estado) {
     case 'LISTO':
-    case 'EXACTO':
-      return 'text-green-600'
     case 'ENVIADO':
-      return 'text-blue-600'
-    case 'SOBRANTE':
-      return 'text-orange-600'
-    case 'FALTANTE':
-      return 'text-red-600'
     case 'PENDIENTE':
     default:
-      return 'text-gray-600'
+      return 'text-green-600'
   }
 }
 
 // Clases para fondo de diferencia
 const getDifferenceBgClass = (estado) => {
+  const diferencia = props.reparto.depositoReal - props.reparto.depositoEsperado
+  
+  // Lógica específica: verde para todo, excepto faltante > 10.000 que va en rojo
+  if (diferencia < 0 && Math.abs(diferencia) > 10000) {
+    return 'bg-red-100 border-red-200'
+  }
+  
+  // Para todos los demás casos (exacto, sobrante, faltante <= 10.000)
   switch (estado) {
     case 'LISTO':
-    case 'EXACTO':
-      return 'bg-green-100 border-green-200'
     case 'ENVIADO':
-      return 'bg-blue-100 border-blue-200'
-    case 'SOBRANTE':
-      return 'bg-orange-100 border-orange-200'
-    case 'FALTANTE':
-      return 'bg-red-100 border-red-200'
     case 'PENDIENTE':
     default:
-      return 'bg-gray-100 border-gray-200'
+      return 'bg-green-100 border-green-200'
   }
 }
 
 // Indicador para diferencia
 const getDifferenceIndicatorClass = (estado) => {
+  const diferencia = props.reparto.depositoReal - props.reparto.depositoEsperado
+  
+  // Lógica específica: verde para todo, excepto faltante > 10.000 que va en rojo
+  if (diferencia < 0 && Math.abs(diferencia) > 10000) {
+    return 'bg-red-400'
+  }
+  
+  // Para todos los demás casos (exacto, sobrante, faltante <= 10.000)
   switch (estado) {
     case 'LISTO':
-    case 'EXACTO':
-      return 'bg-green-400'
     case 'ENVIADO':
-      return 'bg-blue-400'
-    case 'SOBRANTE':
-      return 'bg-orange-400'
-    case 'FALTANTE':
-      return 'bg-red-400'
     case 'PENDIENTE':
     default:
-      return 'bg-gray-400'
+      return 'bg-green-400'
   }
 }
 
-// Etiqueta para diferencia
+// Etiqueta para diferencia - usar solo estados del backend
 const getDifferenceLabel = (estado) => {
-  switch (estado) {
-    case 'EXACTO':
+  const diferencia = props.reparto.depositoReal - props.reparto.depositoEsperado
+  
+  // Para LISTO y ENVIADO, mostrar el tipo de diferencia si la hay
+  if (estado === 'LISTO' || estado === 'ENVIADO') {
+    if (diferencia === 0) {
       return 'Exacto'
-    case 'SOBRANTE':
+    } else if (diferencia > 0) {
       return 'Sobrante'
-    case 'FALTANTE':
+    } else {
       return 'Faltante'
+    }
+  }
+  
+  // Para PENDIENTE, simplemente mostrar Pendiente
+  switch (estado) {
     case 'LISTO':
       return 'Listo'
     case 'ENVIADO':

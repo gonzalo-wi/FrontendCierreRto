@@ -119,9 +119,9 @@
               class="w-full px-4 py-3.5 bg-white/70 backdrop-blur border border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 rounded-xl text-sm font-medium transition-all duration-300 shadow-sm hover:shadow-md focus:shadow-lg"
             >
               <option value="">Todos los estados</option>
-              <option value="EXACTO">✅ Exactos</option>
-              <option value="DIFERENCIA">⚠️ Con diferencias</option>
-              <option value="PENDIENTE">🔄 Pendientes</option>
+              <option value="LISTO">✅ Listo</option>
+              <option value="PENDIENTE">🔄 Pendiente</option>
+              <option value="ENVIADO">� Enviado</option>
             </select>
           </div>
 
