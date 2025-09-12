@@ -201,6 +201,10 @@ const props = defineProps({
   service: {
     type: Object,
     required: true
+  },
+  fechaSeleccionada: {
+    type: String,
+    required: true
   }
 })
 
@@ -333,7 +337,8 @@ const toggleComprobantes = async () => {
   if (mostrandoComprobantes.value && !comprobantesVerificados.value) {
     try {
       const repartoNumber = extractRepartoNumber(props.reparto.idReparto)
-      const comprobantesData = await cargarComprobantesHoy(repartoNumber)
+      console.log(`🔍 [RepartoRow] Cargando comprobantes para reparto ${repartoNumber} con fecha ${props.fechaSeleccionada}`)
+      const comprobantesData = await cargarComprobantes(repartoNumber, props.fechaSeleccionada)
       
       comprobantesCount.value = comprobantesData.length
       comprobantesVerificados.value = true

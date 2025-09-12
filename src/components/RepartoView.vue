@@ -168,6 +168,7 @@
           :title="`Repartos ${title}`"
           :repartos="repartos"
           :service="currentService"
+          :fecha-seleccionada="fechaSeleccionada?.fechaBackend || new Date().toISOString().split('T')[0]"
           @refresh="fetchRepartos"
           @edit="openEditModal"
           @delete-movement="deleteMovement"
@@ -263,6 +264,7 @@
     <ComprobantesModal 
       v-if="showComprobantesModal"
       :reparto="selectedRepartoComprobantes"
+      :initial-date="fechaSeleccionada?.fechaBackend || new Date().toISOString().split('T')[0]"
       @close="closeComprobantesModal"
     />
 

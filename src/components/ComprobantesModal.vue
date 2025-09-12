@@ -97,13 +97,17 @@ const props = defineProps({
   visible: {
     type: Boolean,
     default: true
+  },
+  initialDate: {
+    type: String,
+    default: null
   }
 })
 
 const emit = defineEmits(['close'])
 
 // Estado local
-const fechaSeleccionada = ref(new Date().toISOString().split('T')[0])
+const fechaSeleccionada = ref(props.initialDate || new Date().toISOString().split('T')[0])
 const totalComprobantes = ref(0)
 const ultimaActualizacion = ref(null)
 const comprobantesViewer = ref(null)

@@ -302,6 +302,7 @@
             :key="reparto.idReparto" 
             :reparto="reparto"
             :service="service"
+            :fecha-seleccionada="fechaSeleccionada"
             :class="{ 'animate-row': true }"
             :style="{ animationDelay: `${index * 50}ms` }"
             @edit="$emit('edit', $event)"
@@ -462,6 +463,10 @@ const props = defineProps({
   },
   service: {
     type: Object,
+    required: true
+  },
+  fechaSeleccionada: {
+    type: String,
     required: true
   }
 })
